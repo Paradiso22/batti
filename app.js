@@ -65,6 +65,9 @@ const S = {
 /* ---------- helpers ---------- */
 const $app = document.getElementById('app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// gli id di gruppo veri sono UUID o 'local-<uuid>': tutto ciò che esce da questo
+// set di caratteri non è un id nostro ed è respinto (blocca XSS via hash dell'URL).
+const safeId = s => typeof s === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(s);
 const fmt = fmtCents;
 const lcdFmt = cents => (cents / 100).toFixed(2);
 const nav = h => { location.hash = h; };
@@ -195,6 +198,7 @@ function route() {
     location.replace(`#/g/local-demo${rest ? '/' + rest : ''}${S.flag ? '!' + S.flag : ''}`);
     return;
   }
+  if ((a === 'g' || a === 'join') && b && !safeId(b)) { location.replace('#/'); return; }
   if (a === 'g' && b) ensureGroup(b);
   else if (a === 'join' && b) loadJoin(b);
   else { S.unsub?.(); S.unsub = null; S.gid = null; S.data = null; }
@@ -248,7 +252,7 @@ function navBar(tab) {
     ['altro', 'gear', 'Altro', `#/g/${gid}/altro`],
   ];
   return `<nav class="nav" aria-label="Sezioni del gruppo">${items.map(([id, ic, label, href]) =>
-    `<a class="nav-key" href="${href}" ${tab === id ? 'aria-current="page"' : ''}>${icon(ic, 19)}<span>${label}</span><span class="dot"></span></a>`
+    `<a class="nav-key" href="${esc(href)}" ${tab === id ? 'aria-current="page"' : ''}>${icon(ic, 19)}<span>${label}</span><span class="dot"></span></a>`
   ).join('')}</nav>`;
 }
 
@@ -281,10 +285,10 @@ function homeView() {
         <div class="gsub">${g.cloud ? 'CLOUD · SINCRONIZZATO' : 'LOCALE · QUESTO DISPOSITIVO'}</div></span>
         ${icon('chevR', 18)}
       </a>`).join('')}
-      <hr class="r-rule">` : `
-      <div class="empty"><div class="big">Nessun gruppo</div>
-      <p>Entra col link di invito che ti hanno mandato,<br>oppure incollalo qui sotto.</p></div>`}
-    <div class="key-row"><button class="key key--green key--wide" data-act="go-join">${icon('link', 18)} Entra con un codice</button></div>
+      <hr class="r-rule">
+      <p class="r-note r-center">Per entrare in un gruppo apri il link<br>di invito che ti è stato condiviso.</p>` : `
+      <div class="empty"><div class="big">Nessun gruppo qui</div>
+      <p>Apri sul telefono il link di invito che ti<br>è stato condiviso per entrare nel gruppo.</p></div>`}
     ${!db.hasCloud ? `<hr class="r-rule"><p class="r-note r-center">Per ora solo gruppi locali: il cloud condiviso<br>si attiva collegando Firebase (vedi README).</p>` : ''}
   </div><div class="perf"></div></div>`;
   return `<div class="terminal"><div class="screen">
@@ -317,24 +321,6 @@ function newGroupView() {
         <div class="key-row">
           <button type="button" class="key key--red" data-act="go-home">${icon('x', 16)} Annulla</button>
           <button type="submit" class="key key--green">${icon('check', 16)} Crea</button>
-        </div>
-      </form>
-    </div><div class="perf"></div></div>
-    </div></div></div>`;
-}
-
-function joinInputView() {
-  return `<div class="terminal"><div class="screen">
-    ${lcd({ line1: 'Batti', line1b: '', caption: 'ENTRA NEL GRUPPO', sub: `<span class="led on"></span> INCOLLA IL LINK RICEVUTO` })}
-    <div class="paper-scroll" style="padding-bottom:24px">
-    <div class="perf-wrap"><div class="perf top"></div><div class="paper">
-      <form data-act-submit="join-code">
-        <label class="f-label" for="jcode">Link o codice del gruppo</label>
-        <input class="f-input" id="jcode" required placeholder="Incolla qui…">
-        <p class="r-note" style="margin-top:10px">Chi ha creato il gruppo lo trova in ALTRO → Invita.</p>
-        <div class="key-row">
-          <button type="button" class="key key--red" data-act="go-home">${icon('x', 16)} Annulla</button>
-          <button type="submit" class="key key--green">${icon('check', 16)} Cerca</button>
         </div>
       </form>
     </div><div class="perf"></div></div>
@@ -812,7 +798,6 @@ function render() {
   let html;
   if (a === 'new') html = newGroupView();
   else if (a === 'join' && b) html = joinView();
-  else if (a === 'join') html = joinInputView();
   else if (a === 'g' && b) {
     if (!S.data) html = loadingGroupView(c || 'scontrino');
     else if (!myId() && members().length) html = whoAmIView();
@@ -866,7 +851,6 @@ async function saveExpenseFromDraft() {
 const ACTS = {
   'go-home': () => nav('#/'),
   'go-new': () => nav('#/new'),
-  'go-join': () => nav('#/join'),
   'close-sheet': () => { S.sheet = null; render(); },
 
   'ng-cloud': el => {
@@ -1086,12 +1070,6 @@ const SUBMITS = {
         : `Non riesco a creare il gruppo: ${e.message}`);
     }
   },
-  'join-code': () => {
-    const v = document.getElementById('jcode').value.trim();
-    const m = v.match(/join\/([\w-]+)/) || v.match(/^([\w-]{8,})$/);
-    if (!m) { toast('Non sembra un link di Batti'); return; }
-    nav(`#/join/${m[1]}`);
-  },
   'join-add-me': async () => {
     const name = document.getElementById('joinname').value.trim();
     if (!name) return;
@@ -1166,3 +1144,5 @@ document.addEventListener('input', e => {
 });
 
 route();
+
+if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));

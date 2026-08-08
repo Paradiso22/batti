@@ -1,4 +1,4 @@
-# Batti — spese di gruppo
+# Batti - spese di gruppo
 
 PWA per dividere le spese di coppia e di gruppo, in stile POS italiano: batti
 l'importo sul tastierino, la spesa si stampa sullo scontrino, i saldi dicono
@@ -9,7 +9,7 @@ offline) e Goodbudget (buste di budget mensili).
 Nessun build step: file statici, vanilla JS. Dipendenze: solo l'SDK Firebase
 (caricato da CDN quando il cloud è attivo).
 
-## Attivare il cloud (Firebase, gratis — 5 minuti)
+## Attivare il cloud (Firebase, gratis - 5 minuti)
 
 Senza questo passo l'app funziona lo stesso, ma solo con gruppi locali
 (un solo dispositivo). Per i gruppi condivisi tra più telefoni:

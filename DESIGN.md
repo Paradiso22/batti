@@ -1,6 +1,6 @@
 ---
 name: Batti
-description: Spese di gruppo come al POS — batti l'importo, stampa lo scontrino, salda i conti.
+description: Spese di gruppo come al POS - batti l'importo, stampa lo scontrino, salda i conti.
 colors:
   chassis-0: "#131518"
   chassis-1: "#22252a"
@@ -81,7 +81,7 @@ components:
 
 **Creative North Star: "Il POS di casa"** (seed ac97e945, Operate mode)
 
-The app is a domestic POS terminal: the whole UI is one physical object — a gunmetal Italian bancomat that prints household expenses on ivory thermal paper. The direction contract (verbatim from `index.html`): **THESIS** — registrare una spesa e battere uno scontrino; rifiuta il layout fintech a card pastello con tab bar. **OWN-WORLD** — chassis gunmetal con tasti in gomma (verde conferma, rosso annulla, giallo correzione), display LCD a segmenti verde fosforo, record su carta termica avorio in mono da scontrino, grottesco serigrafato per le etichette chassis. **STORY** — apri e leggi sul display chi deve cosa; batti l'importo, confermi col tasto verde, la spesa si stampa sullo scontrino. **FIRST VIEWPORT** — LCD in alto, scontrino sotto, navigazione e tasto verde BATTI in basso. **FORM** — POS/bancomat italiano + scontrino termico.
+The app is a domestic POS terminal: the whole UI is one physical object - a gunmetal Italian bancomat that prints household expenses on ivory thermal paper. The direction contract (verbatim from `index.html`): **THESIS** - registrare una spesa e battere uno scontrino; rifiuta il layout fintech a card pastello con tab bar. **OWN-WORLD** - chassis gunmetal con tasti in gomma (verde conferma, rosso annulla, giallo correzione), display LCD a segmenti verde fosforo, record su carta termica avorio in mono da scontrino, grottesco serigrafato per le etichette chassis. **STORY** - apri e leggi sul display chi deve cosa; batti l'importo, confermi col tasto verde, la spesa si stampa sullo scontrino. **FIRST VIEWPORT** - LCD in alto, scontrino sotto, navigazione e tasto verde BATTI in basso. **FORM** - POS/bancomat italiano + scontrino termico.
 
 Every surface belongs to one of three materials: **chassis** (dark housing: navigation, sheets, toasts), **LCD** (phosphor-green status glass), **paper** (all data records). Nothing floats in an abstract app-space.
 
@@ -92,7 +92,7 @@ Every surface belongs to one of three materials: **chassis** (dark housing: navi
 
 ## Colors
 
-A machine palette: dark gunmetal housing, ivory paper, phosphor green — with rubber-key signal colors doing all the talking.
+A machine palette: dark gunmetal housing, ivory paper, phosphor green - with rubber-key signal colors doing all the talking.
 
 ### Primary
 - **Verde POS** (`green`, with `green-hi`/`green-lo` for gradient top and ledge): the confirm color. Green keys (BATTI, Conferma, Esegui), positive balances, on-track budget fills, current-month chart column, focused input underline.
@@ -110,11 +110,11 @@ A machine palette: dark gunmetal housing, ivory paper, phosphor green — with r
 - **Carta termica** (`paper`, `paper-dim` for rail tracks) carrying **ink** text, **ink-2** faded ink, and **line** for dashed rules and hairline borders. `key-bone`/`key-bone-hi`/`key-bone-lo` + `key-ink` are the neutral rubber keys.
 
 **The Traffic-Light Rule.** Green means confirm, red means cancel/destroy, yellow means correct. A key's color is its meaning; never use these hues for decoration or emphasis.
-**The Fixed Jersey Rule.** A member's color is `MCOLORS[member.c % 6]` — assigned at creation, stored on the member, identical in every chip, dot, stackbar and legend. Never reassign or restyle it.
+**The Fixed Jersey Rule.** A member's color is `MCOLORS[member.c % 6]` - assigned at creation, stored on the member, identical in every chip, dot, stackbar and legend. Never reassign or restyle it.
 
 ## Typography
 
-**Display Font:** DSEG7 Classic Bold (LCD digits only) · **Body Font:** Azeret Mono (400/500/700 — everything printed on paper) · **Label Font:** Barlow Semi Condensed (600/700 — silkscreen on chassis and keys) · **Base UI:** Barlow (400–700 fallback surface).
+**Display Font:** DSEG7 Classic Bold (LCD digits only) · **Body Font:** Azeret Mono (400/500/700 - everything printed on paper) · **Label Font:** Barlow Semi Condensed (600/700 - silkscreen on chassis and keys) · **Base UI:** Barlow (400–700 fallback surface).
 
 **Character:** thermal-printer mono for records, seven-segment digits for the display, condensed grotesque silkscreen for the machine's own labels. Uppercase + tracking is the machine speaking; mixed case is user data.
 
@@ -126,11 +126,11 @@ A machine palette: dark gunmetal housing, ivory paper, phosphor green — with r
 - **Label** (Barlow Semi Condensed 700, 14px, ls .08em, uppercase): key caps; nav keys 9px; sheet titles 13px ls .14em.
 - **Label-mono** (mono 700, 10.5px, ls .16em, uppercase, `ink-2`): form labels (`.f-label`); LCD captions are mono 500 10–12px ls .12–.18em.
 
-**The LCD-Only Rule.** DSEG7 renders LCD digits and nothing else. Data must always be legible: records, amounts and forms are Azeret Mono — the pixel/segment look is reserved for the display glass.
+**The LCD-Only Rule.** DSEG7 renders LCD digits and nothing else. Data must always be legible: records, amounts and forms are Azeret Mono - the pixel/segment look is reserved for the display glass.
 
 ## Layout
 
-One vertical terminal column, mobile-first: `.terminal` max-width 470px, full height, holding a fixed stack — LCD frame on top, `.paper-scroll` (flex 1, the only scroll region, 132px bottom padding to clear the dock), and an absolute bottom `.dock` that fades up from chassis (gradient from transparent to `chassis-1` at 26%), containing the right-aligned green FAB row and a 5-column nav grid. Safe-area insets (`--sat`/`--sab`) pad LCD top and dock bottom. At ≥720px the terminal becomes a physical device on a desk: centered 440px × min(880px, 100dvh − 48px), 30px radius, 1px `#34383f` border, deep drop shadow. Sheets overlay from the bottom (max-height 92%, backdrop `rgba(8,9,11,.6)`). Spacing is a loose 2px rhythm — 6/8/10/12/14/16px gaps; paper slips stack with 14px gaps; rows use 8–11px vertical padding with dashed dividers instead of margins.
+One vertical terminal column, mobile-first: `.terminal` max-width 470px, full height, holding a fixed stack - LCD frame on top, `.paper-scroll` (flex 1, the only scroll region, 132px bottom padding to clear the dock), and an absolute bottom `.dock` that fades up from chassis (gradient from transparent to `chassis-1` at 26%), containing the right-aligned green FAB row and a 5-column nav grid. Safe-area insets (`--sat`/`--sab`) pad LCD top and dock bottom. At ≥720px the terminal becomes a physical device on a desk: centered 440px × min(880px, 100dvh − 48px), 30px radius, 1px `#34383f` border, deep drop shadow. Sheets overlay from the bottom (max-height 92%, backdrop `rgba(8,9,11,.6)`). Spacing is a loose 2px rhythm - 6/8/10/12/14/16px gaps; paper slips stack with 14px gaps; rows use 8–11px vertical padding with dashed dividers instead of margins.
 
 ## Elevation & Depth
 
@@ -140,7 +140,7 @@ Depth is physical, not atmospheric: hard ledges under rubber keys, deep insets b
 
 ## Shapes
 
-Soft-rectangle machine parts: keys 12px (small 10px, FAB 14px, pad keys 12px), LCD and nav keys 10px, segmented control 9px, sheet top corners 18px, device shell 30px, toast 10px, rails 3.5px. Chips are full pills (999px). Paper is the exception: dead-sharp 0px corners with 7px zigzag perforation strips (`.perf`, two 45° gradients, 9px teeth; `.perf.top` mirrored) at tear edges. On paper, structure is drawn with 1px dashed `line` rules (solid variant before totals) and 1.5px solid `line` borders on controls — never boxes with fills.
+Soft-rectangle machine parts: keys 12px (small 10px, FAB 14px, pad keys 12px), LCD and nav keys 10px, segmented control 9px, sheet top corners 18px, device shell 30px, toast 10px, rails 3.5px. Chips are full pills (999px). Paper is the exception: dead-sharp 0px corners with 7px zigzag perforation strips (`.perf`, two 45° gradients, 9px teeth; `.perf.top` mirrored) at tear edges. On paper, structure is drawn with 1px dashed `line` rules (solid variant before totals) and 1.5px solid `line` borders on controls - never boxes with fills.
 
 ## Components
 
@@ -148,7 +148,7 @@ Soft-rectangle machine parts: keys 12px (small 10px, FAB 14px, pad keys 12px), L
 Rubber terminal keys: Barlow Semi Condensed 700 uppercase on a vertical gradient (`*-hi` → base), ledge in `*-lo`. Variants: **bone** (default, `key-ink` text), **green** / **red** / **yellow** (Traffic-Light semantics; white text, yellow uses `#3a2c07`), **`--sm`** (40px, 3px ledge), **`--wide`** (full width), FAB (15px text, 14px radius). Disabled = opacity .45. `.key-row` lays keys flex-1 with 10px gaps; the red/cancel key sits left, green/confirm right.
 
 ### LCD (`lcd()` in app.js)
-Anatomy: `.lcd-top` (context line + bold right value, `lcd-mid`) → `.lcd-main` (uppercase caption + `.lcd-num`) → `.lcd-sub` (LED + sync status). `.lcd-num` layers a `.ghost` of all-`8` segments in `lcd-dim` beneath the `.lit` digits (glow `0 0 10px rgba(166,242,164,.35)`). `is-amber` switches digits to `lcd-amber` (ghost `#403822`) — used when the viewer owes money. LEDs: 7px dots, `led-on` green = synced/ready, amber = local/offline/pending. `is-flash` blinks the caption (360ms, steps(2), ×2) when a print just happened. The pad sheet reuses the LCD as its amount display.
+Anatomy: `.lcd-top` (context line + bold right value, `lcd-mid`) → `.lcd-main` (uppercase caption + `.lcd-num`) → `.lcd-sub` (LED + sync status). `.lcd-num` layers a `.ghost` of all-`8` segments in `lcd-dim` beneath the `.lit` digits (glow `0 0 10px rgba(166,242,164,.35)`). `is-amber` switches digits to `lcd-amber` (ghost `#403822`) - used when the viewer owes money. LEDs: 7px dots, `led-on` green = synced/ready, amber = local/offline/pending. `is-flash` blinks the caption (360ms, steps(2), ×2) when a print just happened. The pad sheet reuses the LCD as its amount display.
 
 ### Paper / Receipt
 Slips are `.perf-wrap` (perf top + `.paper` + perf bottom). Paper texture: faint 5px horizontal thermal banding (repeating gradient, `rgba(120,105,70,.028)`) over `paper`. Contents: centered mono `r-head`, dashed `r-rule`s, `.r-date` day separators (dashed lines flanking "GIO 08/08"), receipt rows (`.rrow`: 26px icon / description + who / right-aligned amount, dashed dividers), `.r-total` uppercase total line after a solid rule. Transfers are ghosted in `ink-2` with the swap icon. Empty states are printed on the paper in the same voice. Forms also live on paper: `.f-label` mono labels over `.f-input` transparent fields with a 1px `line` bottom border (focus: green underline, no ring).
@@ -163,12 +163,12 @@ Slips are `.perf-wrap` (perf top + `.paper` + perf bottom). Paper texture: faint
 `.sheet-panel`: chassis bottom sheet (18px top radius, grip bar, uppercase silk title); inside, forms are again paper slips, and action rows are key-rows. The nav dock: five `.nav-key` chassis keys (icon + 9px label + status dot); active page = `silk` text + glowing `led-on` dot; inactive dots are dark recesses. Toast: chassis pill with green LED, `role="status"`, bottom-centered above the dock.
 
 ### Icons
-Single stroke set: `PATHS` in app.js, 24px viewBox, `stroke-width 1.75`, round caps/joins, `currentColor`, default 20px (contextual 15–22px). Extend by adding paths to `PATHS` — no second icon style, no emoji.
+Single stroke set: `PATHS` in app.js, 24px viewBox, `stroke-width 1.75`, round caps/joins, `currentColor`, default 20px (contextual 15–22px). Extend by adding paths to `PATHS` - no second icon style, no emoji.
 
 ### Motion
-- **The Print Moment** (the one authored flourish): a new expense feeds onto the receipt — `.rrow--new` runs `feed` 480ms `steps(8)`: slides down 16px while a `clip-path` reveals it top-to-bottom like a dot-matrix printhead. Triggered only for just-saved expenses (`S.justPrinted`), paired with the LCD caption blink.
+- **The Print Moment** (the one authored flourish): a new expense feeds onto the receipt - `.rrow--new` runs `feed` 480ms `steps(8)`: slides down 16px while a `clip-path` reveals it top-to-bottom like a dot-matrix printhead. Triggered only for just-saved expenses (`S.justPrinted`), paired with the LCD caption blink.
 - Sheets rise with `sheetup` 240ms `cubic-bezier(.2,.9,.3,1)`; toasts fade up 200ms; key travel 70ms ease-out.
-- `prefers-reduced-motion`: all animations and key transitions off — states land instantly.
+- `prefers-reduced-motion`: all animations and key transitions off - states land instantly.
 
 ## Do's and Don'ts
 
@@ -179,7 +179,7 @@ Single stroke set: `PATHS` in app.js, 24px viewBox, `stroke-width 1.75`, round c
 - **Do** speak the receipt voice for machine text: Italian, uppercase, letter-spaced mono, `·` separators, dashed rules.
 
 ### Don't:
-- **Don't** use emoji as icons — only the `PATHS` 1.75-stroke set (✻ and ✓ are typographic glyphs, not icons).
+- **Don't** use emoji as icons - only the `PATHS` 1.75-stroke set (✻ and ✓ are typographic glyphs, not icons).
 - **Don't** put DSEG7 or fake-pixel type on data; segment rendering belongs to the LCD alone.
 - **Don't** break the Traffic-Light or Fixed Jersey rules: signal hues carry meaning, member colors are identity.
 - **Don't** reintroduce the rejected world: no pastel fintech cards, no floating tab bar, no shadows-as-decoration, no rounded paper.

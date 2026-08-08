@@ -1,4 +1,4 @@
-// db.js — strato dati. Gruppi cloud (Firestore) e gruppi locali (localStorage),
+// db.js - strato dati. Gruppi cloud (Firestore) e gruppi locali (localStorage),
 // stessa interfaccia. Un gruppo = doc meta + sottocollezione expenses.
 import { firebaseConfig } from './firebase-config.js';
 

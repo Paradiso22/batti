@@ -1,4 +1,4 @@
-// logic.js — funzioni pure: divisioni, saldi, piano rimborsi, ricorrenti.
+// logic.js - funzioni pure: divisioni, saldi, piano rimborsi, ricorrenti.
 // Tutti gli importi sono in centesimi (interi). Nessun I/O qui.
 
 // Divide `amount` (cent) tra memberIds. mode: 'equal' | 'exact' | 'percent'.
@@ -88,7 +88,7 @@ function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); } // m 1-based
 // rec: {id, startMonth 'YYYY-MM', dayOfMonth, everyMonths?, desc, amount, paidBy, shares, catId}
 // everyMonths: cadenza in mesi (1 = mensile, 2, 3, 6, 12); il ciclo parte da startMonth.
 // today: 'YYYY-MM-DD'. Ritorna [{expenseId, date}] con id deterministico
-// rec_<id>_<YYYY-MM> — così due telefoni che scrivono insieme non duplicano.
+// rec_<id>_<YYYY-MM> - così due telefoni che scrivono insieme non duplicano.
 export function dueRecurring(rec, today) {
   const due = [];
   const curMonth = monthKey(today);

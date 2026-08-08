@@ -8,15 +8,15 @@ web
 
 ## Stack
 
-Delegated: static PWA (no build step, vanilla ES modules) deployed on GitHub Pages; Firebase Firestore free tier as shared database (realtime sync + offline persistence built into the SDK, no server code). User explicitly chose GitHub Pages as host and "something free" for the database; framework choice left to us — vanilla chosen for zero-build deploys.
+Delegated: static PWA (no build step, vanilla ES modules) deployed on GitHub Pages; Firebase Firestore free tier as shared database (realtime sync + offline persistence built into the SDK, no server code). User explicitly chose GitHub Pages as host and "something free" for the database; framework choice left to us - vanilla chosen for zero-build deploys.
 
 ## Users
 
-Italian couples and small groups of friends/family who share expenses (household, trips, dinners). Primary scene: on the phone, right after paying something, entering the expense in seconds. Second scene: end of month, checking balances, budgets and who owes whom. The app owner (Gio) will use it with their partner and friend groups. Installed as a PWA from the browser — no app store.
+Italian couples and small groups of friends/family who share expenses (household, trips, dinners). Primary scene: on the phone, right after paying something, entering the expense in seconds. Second scene: end of month, checking balances, budgets and who owes whom. The app owner (Gio) will use it with their partner and friend groups. Installed as a PWA from the browser - no app store.
 
 ## Product Purpose
 
-Track shared expenses, split them flexibly, and settle debts with the minimum number of transfers — plus monthly envelope budgets per category. Success: both partners enter expenses without friction, always know "chi deve cosa a chi", and see where the money goes each month.
+Track shared expenses, split them flexibly, and settle debts with the minimum number of transfers - plus monthly envelope budgets per category. Success: both partners enter expenses without friction, always know "chi deve cosa a chi", and see where the money goes each month.
 
 ## Positioning
 
@@ -38,18 +38,18 @@ Confirmed feature set (user-selected):
 4. Charts & statistics: per-category breakdown, **who spent per category** (explicitly requested), monthly trend.
 
 Constraints:
-- Static hosting only (GitHub Pages) — no server code; all logic client-side + Firestore rules.
+- Static hosting only (GitHub Pages) - no server code; all logic client-side + Firestore rules.
 - Firestore security: unguessable group IDs, list denied at group level.
 - Money handled in integer cents.
 - Multi-currency: deferred, not in scope.
 
 ## Evidence on Hand
 
-None yet — greenfield. No logo or brand assets exist; name to be chosen at build time. Do not fabricate testimonials or user numbers.
+None yet - greenfield. No logo or brand assets exist; name to be chosen at build time. Do not fabricate testimonials or user numbers.
 
 ## Product Principles
 
-1. Entering an expense must take under 10 seconds — the add-expense flow is the product.
+1. Entering an expense must take under 10 seconds - the add-expense flow is the product.
 2. Zero-friction entry for invitees: open link, pick your name, done.
 3. Trust through clarity: balances and settlements must always be explainable from the visible expense list.
 4. Works on the worst connection: offline-first, sync is invisible.

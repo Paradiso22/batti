@@ -1,4 +1,4 @@
-// test.js — controlli sul motore soldi: node test.js
+// test.js - controlli sul motore soldi: node test.js
 import { computeShares, computeBalances, settlePlan, dueRecurring, parseAmount } from './logic.js';
 import assert from 'node:assert';
 
@@ -76,4 +76,4 @@ assert.equal(parseAmount('1.234,56'), 123456);
 assert.equal(parseAmount('abc'), null);
 assert.equal(parseAmount('12,505'), null);
 
-console.log('OK — tutti i controlli passano');
+console.log('OK - tutti i controlli passano');

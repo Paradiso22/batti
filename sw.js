@@ -1,4 +1,4 @@
-// sw.js — offline: precache dell'app, poi stale-while-revalidate.
+// sw.js - offline: precache dell'app, poi stale-while-revalidate.
 // Le richieste Firestore (dati) non passano di qui: pensa a tutto la cache dell'SDK.
 const CACHE = 'batti-v1';
 const CORE = [

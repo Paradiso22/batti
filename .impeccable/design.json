@@ -25,7 +25,7 @@
       "display": { "displayName": "LCD digits", "purpose": "Seven-segment amounts on the LCD only, with 8-ghost underlay and phosphor glow." },
       "title": { "displayName": "Receipt title", "purpose": "Centered uppercase headers on paper slips." },
       "body": { "displayName": "Receipt body", "purpose": "Expense descriptions and all printed data; amounts add 700 weight and tabular-nums." },
-      "label": { "displayName": "Silkscreen", "purpose": "Key caps, nav keys, sheet titles — the machine's own labels on chassis and rubber." },
+      "label": { "displayName": "Silkscreen", "purpose": "Key caps, nav keys, sheet titles - the machine's own labels on chassis and rubber." },
       "label-mono": { "displayName": "Form label", "purpose": "Uppercase mono micro-labels above inputs on paper." },
       "ui": { "displayName": "Base UI", "purpose": "Barlow fallback surface; 16px inputs (prevents iOS zoom)." }
     },
@@ -40,10 +40,10 @@
       { "name": "shell", "value": "0 30px 80px rgba(0,0,0,.6), 0 4px 16px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06)", "purpose": "Device body on the desk (>=720px)." }
     ],
     "motion": [
-      { "name": "feed", "value": "feed 480ms steps(8) both — translateY(-16px)->0 + clip-path inset(0 0 85% 0)->0", "purpose": "THE authored moment: a new expense prints onto the receipt like a dot-matrix head; only on just-saved rows." },
-      { "name": "sheetup", "value": "sheetup 240ms cubic-bezier(.2,.9,.3,1) both — translateY(40%), opacity .4 -> rest", "purpose": "Bottom sheets rise." },
-      { "name": "toastin", "value": "toastin 200ms ease-out — translateY(8px), opacity 0 -> rest", "purpose": "Toast entry." },
-      { "name": "lcdblink", "value": "lcdblink 360ms steps(2) 2 — caption opacity to .25", "purpose": "LCD caption blink after a print." },
+      { "name": "feed", "value": "feed 480ms steps(8) both - translateY(-16px)->0 + clip-path inset(0 0 85% 0)->0", "purpose": "THE authored moment: a new expense prints onto the receipt like a dot-matrix head; only on just-saved rows." },
+      { "name": "sheetup", "value": "sheetup 240ms cubic-bezier(.2,.9,.3,1) both - translateY(40%), opacity .4 -> rest", "purpose": "Bottom sheets rise." },
+      { "name": "toastin", "value": "toastin 200ms ease-out - translateY(8px), opacity 0 -> rest", "purpose": "Toast entry." },
+      { "name": "lcdblink", "value": "lcdblink 360ms steps(2) 2 - caption opacity to .25", "purpose": "LCD caption blink after a print." },
       { "name": "key-travel", "value": "transform/box-shadow 70ms ease-out", "purpose": "Key press travel; all motion disabled under prefers-reduced-motion." }
     ],
     "breakpoints": [
@@ -52,7 +52,7 @@
   },
   "components": [
     {
-      "name": "Key — Green (conferma)",
+      "name": "Key - Green (conferma)",
       "kind": "button",
       "refersTo": "key-green",
       "description": "The confirm key: BATTI, Conferma, Esegui. Green means confirm, always.",
@@ -60,7 +60,7 @@
       "css": ".ds-key-green { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 13px 16px; border: 0; cursor: pointer; font-family: 'Barlow Semi Condensed', 'Barlow', system-ui, sans-serif; font-weight: 700; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; border-radius: 12px; color: #fff; background: linear-gradient(180deg, var(--green-hi, #29a35d), var(--green, #1f8a4c)); box-shadow: 0 4px 0 var(--green-lo, #135c33), 0 6px 12px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.25); transition: transform 70ms ease-out, box-shadow 70ms ease-out; user-select: none; } .ds-key-green:hover { filter: brightness(1.05); } .ds-key-green:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--green-lo, #135c33), 0 2px 5px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.25); } .ds-key-green:focus-visible { outline: 2px solid var(--yellow, #e8b93c); outline-offset: 2px; }"
     },
     {
-      "name": "Key — Bone (neutra)",
+      "name": "Key - Bone (neutra)",
       "kind": "button",
       "refersTo": "key-bone",
       "description": "Neutral rubber key for non-signal actions (Copia link, digits on the pad).",
@@ -118,7 +118,7 @@
   ],
   "narrative": {
     "northStar": "Il POS di casa",
-    "overview": "The app is a domestic POS terminal: the whole UI is one physical object — a gunmetal Italian bancomat that prints household expenses on ivory thermal paper. The direction contract (verbatim from index.html): THESIS — registrare una spesa e battere uno scontrino; rifiuta il layout fintech a card pastello con tab bar. OWN-WORLD — chassis gunmetal con tasti in gomma (verde conferma, rosso annulla, giallo correzione), display LCD a segmenti verde fosforo, record su carta termica avorio in mono da scontrino, grottesco serigrafato per le etichette chassis. STORY — apri e leggi sul display chi deve cosa; batti l'importo, confermi col tasto verde, la spesa si stampa sullo scontrino. FIRST VIEWPORT — LCD in alto, scontrino sotto, navigazione e tasto verde BATTI in basso. FORM — POS/bancomat italiano + scontrino termico. Every surface belongs to one of three materials: chassis (dark housing: navigation, sheets, toasts), LCD (phosphor-green status glass), paper (all data records). Nothing floats in an abstract app-space.",
+    "overview": "The app is a domestic POS terminal: the whole UI is one physical object - a gunmetal Italian bancomat that prints household expenses on ivory thermal paper. The direction contract (verbatim from index.html): THESIS - registrare una spesa e battere uno scontrino; rifiuta il layout fintech a card pastello con tab bar. OWN-WORLD - chassis gunmetal con tasti in gomma (verde conferma, rosso annulla, giallo correzione), display LCD a segmenti verde fosforo, record su carta termica avorio in mono da scontrino, grottesco serigrafato per le etichette chassis. STORY - apri e leggi sul display chi deve cosa; batti l'importo, confermi col tasto verde, la spesa si stampa sullo scontrino. FIRST VIEWPORT - LCD in alto, scontrino sotto, navigazione e tasto verde BATTI in basso. FORM - POS/bancomat italiano + scontrino termico. Every surface belongs to one of three materials: chassis (dark housing: navigation, sheets, toasts), LCD (phosphor-green status glass), paper (all data records). Nothing floats in an abstract app-space.",
     "keyCharacteristics": [
       "One terminal, three materials; every element states which one it is made of.",
       "Rubber keys with real travel; data printed in receipt mono; status glows on glass.",
@@ -126,8 +126,8 @@
     ],
     "rules": [
       { "name": "The Traffic-Light Rule", "body": "Green means confirm, red means cancel/destroy, yellow means correct. A key's color is its meaning; never use these hues for decoration or emphasis.", "section": "colors" },
-      { "name": "The Fixed Jersey Rule", "body": "A member's color is MCOLORS[member.c % 6] — assigned at creation, stored on the member, identical in every chip, dot, stackbar and legend. Never reassign or restyle it.", "section": "colors" },
-      { "name": "The LCD-Only Rule", "body": "DSEG7 renders LCD digits and nothing else. Data must always be legible: records, amounts and forms are Azeret Mono — the pixel/segment look is reserved for the display glass.", "section": "typography" },
+      { "name": "The Fixed Jersey Rule", "body": "A member's color is MCOLORS[member.c % 6] - assigned at creation, stored on the member, identical in every chip, dot, stackbar and legend. Never reassign or restyle it.", "section": "colors" },
+      { "name": "The LCD-Only Rule", "body": "DSEG7 renders LCD digits and nothing else. Data must always be legible: records, amounts and forms are Azeret Mono - the pixel/segment look is reserved for the display glass.", "section": "typography" },
       { "name": "The Rubber Ledge Rule", "body": "Anything pressable has a visible ledge and loses it when pressed: :active translates down (3px keys, 2px nav keys) while the ledge shadow collapses from 4px/3px to 1px, in 70ms ease-out. No ledge, not a key.", "section": "elevation" }
     ],
     "dos": [
@@ -137,7 +137,7 @@
       "Do speak the receipt voice for machine text: Italian, uppercase, letter-spaced mono, · separators, dashed rules."
     ],
     "donts": [
-      "Don't use emoji as icons — only the PATHS 1.75-stroke set (✻ and ✓ are typographic glyphs, not icons).",
+      "Don't use emoji as icons - only the PATHS 1.75-stroke set (✻ and ✓ are typographic glyphs, not icons).",
       "Don't put DSEG7 or fake-pixel type on data; segment rendering belongs to the LCD alone.",
       "Don't break the Traffic-Light or Fixed Jersey rules: signal hues carry meaning, member colors are identity.",
       "Don't reintroduce the rejected world: no pastel fintech cards, no floating tab bar, no shadows-as-decoration, no rounded paper."

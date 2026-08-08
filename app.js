@@ -1,4 +1,4 @@
-// app.js — interfaccia. Stato in S, render a stringhe, eventi delegati con data-act.
+// app.js - interfaccia. Stato in S, render a stringhe, eventi delegati con data-act.
 import { computeShares, computeBalances, settlePlan, dueRecurring, monthKey, fmtCents, parseAmount } from './logic.js';
 import * as db from './db.js';
 
@@ -112,7 +112,7 @@ function parseRoute() {
   return path.split('/').filter(Boolean);
 }
 
-// #/demo[/tab][!pad|!detail] — gruppo locale d'esempio per provare l'app
+// #/demo[/tab][!pad|!detail] - gruppo locale d'esempio per provare l'app
 function seedDemo() {
   const gid = 'local-demo';
   const existing = localStorage.getItem(`batti:data:${gid}`);
@@ -232,8 +232,8 @@ function lcd({ line1, line1b, caption, num, amber, sub, flash }) {
 function syncSub() {
   if (!S.gid) return '';
   const local = S.gid.startsWith('local-');
-  if (local) return `<span class="led amber"></span> GRUPPO LOCALE — SOLO QUESTO DISPOSITIVO`;
-  if (!S.online) return `<span class="led amber"></span> OFFLINE — SINCRONIZZO AL RITORNO IN RETE`;
+  if (local) return `<span class="led amber"></span> GRUPPO LOCALE - SOLO QUESTO DISPOSITIVO`;
+  if (!S.online) return `<span class="led amber"></span> OFFLINE - SINCRONIZZO AL RITORNO IN RETE`;
   if (S.data?.pending) return `<span class="led amber"></span> INVIO IN CORSO…`;
   return `<span class="led on"></span> SINCRONIZZATO`;
 }
@@ -486,7 +486,7 @@ function busteView() {
     ${withB.length ? `<hr class="r-rule solid"><div class="r-total"><span>Totale buste</span><span class="amt ${totS > totB ? 'neg' : ''}">${fmt(totS)} / ${fmt(totB)}<small> €</small></span></div>` : ''}
   </div><div class="perf"></div></div>
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
-    <span class="f-label">Senza busta — tocca per assegnarla</span>
+    <span class="f-label">Senza busta - tocca per assegnarla</span>
     <div class="catgrid">${withoutB.map(c =>
       `<button class="catbtn" data-act="set-budget" data-id="${esc(c.id)}">${icon(c.icon, 20)}<span>${esc(c.name)}</span></button>`).join('')}
     </div>
@@ -561,7 +561,7 @@ function statsView() {
   </div><div class="perf"></div></div>
 
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
-    <span class="f-label">Andamento — ultimi 12 mesi</span>
+    <span class="f-label">Andamento - ultimi 12 mesi</span>
     <svg class="chart-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Spese mensili degli ultimi 12 mesi">
       <line x1="2" y1="108.5" x2="${W - 2}" y2="108.5" stroke="var(--line)" stroke-width="1"/>
       ${colsSvg}
@@ -615,7 +615,7 @@ function altroView() {
   </div><div class="perf"></div></div>
 
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
-    <span class="f-label">Spese ricorrenti — si battono da sole</span>
+    <span class="f-label">Spese ricorrenti - si battono da sole</span>
     ${(m.recurring || []).length ? `<div class="setlist">${m.recurring.map(r => `<div class="li">
       ${icon(cat(r.catId).icon, 17)}
       <span>${esc(r.desc)} <span class="sub">${EVERY_LABEL[r.everyMonths || 1]} il ${r.dayOfMonth} · ${esc(mname(r.paidBy))} paga · ${fmt(r.amount)} €</span></span>

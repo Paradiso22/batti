@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Batti — spese di gruppo</title>
+<meta name="description" content="Dividi le spese di coppia e di gruppo come al POS: batti l'importo, stampa lo scontrino, salda i conti.">
+<meta name="theme-color" content="#1b1d21">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preload" href="./fonts/DSEG7Classic-Bold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="./fonts/azeret-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="./fonts/barlow-semi-condensed-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<!--
+THESIS: L'app e un POS domestico: registrare una spesa e battere uno scontrino — rifiuta il layout fintech a card pastello con tab bar.
+OWN-WORLD: chassis gunmetal con tasti in gomma (verde conferma, rosso annulla, giallo correzione), display LCD a segmenti verde fosforo, record su carta termica avorio in mono da scontrino, grottesco serigrafato per le etichette chassis.
+STORY: apri e leggi sul display chi deve cosa; batti l'importo sul tastierino, confermi col tasto verde, la spesa si stampa sullo scontrino; a fine mese buste, statistiche e "salda i conti" col piano rimborsi.
+FIRST VIEWPORT: display LCD con saldo e stato sync in alto, scontrino delle spese sotto, tastiera di navigazione e tasto verde BATTI in basso.
+FORM: POS/bancomat italiano + scontrino termico; candidato 6 della lista; seed ac97e945.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md.
+-->
+<div id="app" aria-live="polite"></div>
+<script type="module" src="./app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+}
+</script>
+</body>
+</html>

@@ -1,5 +1,9 @@
 # Batti - spese di gruppo
 
+**App online: <https://paradiso22.github.io/batti/>** - aprila dal telefono e
+installala (Android: menu → Installa app; iPhone: Condividi → Aggiungi alla
+schermata Home).
+
 PWA per dividere le spese di coppia e di gruppo, in stile POS italiano: batti
 l'importo sul tastierino, la spesa si stampa sullo scontrino, i saldi dicono
 chi deve cosa a chi. Il meglio di Splitwise (divisioni flessibili e saldi),
@@ -11,8 +15,9 @@ Nessun build step: file statici, vanilla JS. Dipendenze: solo l'SDK Firebase
 
 ## Attivare il cloud (Firebase, gratis - 5 minuti)
 
-Senza questo passo l'app funziona lo stesso, ma solo con gruppi locali
-(un solo dispositivo). Per i gruppi condivisi tra più telefoni:
+**Già fatto**: progetto "Spese Condivise" (`spese-condivise-c1017`), Firestore
+in `eur3`, regole pubblicate, config in `firebase-config.js`. I passaggi qui
+sotto servono solo se un giorno vorrai rifare tutto da zero su un altro progetto:
 
 1. Vai su <https://console.firebase.google.com> → **Aggiungi progetto**
    (nome libero, es. `batti`; Google Analytics: non serve).
@@ -29,27 +34,17 @@ La sicurezza è il modello Splid: l'ID del gruppo è un UUID non indovinabile
 che fa da segreto; le regole vietano di elencare i gruppi. Chi ha il link è
 dentro, chi non ce l'ha non trova niente.
 
-## Pubblicare su GitHub Pages
+## Pubblicazione
+
+**Già fatto**: repo <https://github.com/Paradiso22/batti>, GitHub Pages attivo
+su `main` / root. Per pubblicare ogni modifica futura:
 
 ```bash
-git init
-git add -A
-git commit -m "Batti v1"
+git add -A && git commit -m "descrizione" && git push
 ```
 
-Poi crea un repository **pubblico** su <https://github.com/new> (es. `batti`) e:
-
-```bash
-git remote add origin https://github.com/TUO-UTENTE/batti.git
-git branch -M main
-git push -u origin main
-```
-
-Infine su GitHub: **Settings → Pages → Source: Deploy from a branch →
-Branch: `main` / (root) → Save**. Dopo un minuto l'app è su
-`https://TUO-UTENTE.github.io/batti/`.
-
-Ogni aggiornamento futuro: `git add -A && git commit -m "..." && git push`.
+Dopo il push, Pages aggiorna il sito in un minuto circa; l'app installata
+prende la versione nuova alla seconda apertura.
 
 ## Installarla sul telefono
 

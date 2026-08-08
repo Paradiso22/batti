@@ -1,10 +1,14 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Modello Splid: l'ID gruppo è un UUID non indovinabile e fa da segreto.
-    // Si può leggere/scrivere un gruppo solo conoscendone l'ID; elencare i gruppi è vietato.
+    // Modello Splid: l'ID gruppo e' un UUID non indovinabile e fa da segreto.
+    // Si puo' leggere/scrivere un gruppo solo conoscendone l'ID; elencare i gruppi e' vietato.
+    // La CREAZIONE e' riservata: serve il codice proprietario.
+    // NB: nel repo c'e' un segnaposto; il codice vero sta solo nelle regole
+    // pubblicate sulla console Firebase (e in testa a chi gestisce l'app).
     match /groups/{groupId} {
-      allow get, create, update: if true;
+      allow get, update: if true;
+      allow create: if request.resource.data.ownerKey == 'METTI-QUI-IL-CODICE-VERO';
       allow list, delete: if false;
       match /expenses/{expenseId} {
         allow read, write: if true;

@@ -55,12 +55,14 @@ const localSubs = new Map();
 
 // --- API ---
 
-export async function createGroup({ name, members, categories, cloud }) {
+export async function createGroup({ name, members, categories, cloud, ownerKey }) {
   const id = cloud ? uid() : `local-${uid()}`;
   const meta = {
     name, members, categories,
     budgets: {}, recurring: [],
     createdAt: Date.now(),
+    // le regole Firestore accettano la creazione solo col codice proprietario giusto
+    ...(cloud ? { ownerKey: ownerKey || '' } : {}),
   };
   if (cloud) {
     const f = await firestore();

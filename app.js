@@ -283,9 +283,8 @@ function homeView() {
       </a>`).join('')}
       <hr class="r-rule">` : `
       <div class="empty"><div class="big">Nessun gruppo</div>
-      <p>Crea il primo gruppo per la coppia,<br>la casa o il viaggio con gli amici.</p></div>`}
-    <div class="key-row"><button class="key key--green key--wide" data-act="go-new">${icon('plus', 18)} Nuovo gruppo</button></div>
-    <div class="key-row"><button class="key key--wide" data-act="go-join">${icon('link', 18)} Entra con un codice</button></div>
+      <p>Entra col link di invito che ti hanno mandato,<br>oppure incollalo qui sotto.</p></div>`}
+    <div class="key-row"><button class="key key--green key--wide" data-act="go-join">${icon('link', 18)} Entra con un codice</button></div>
     ${!db.hasCloud ? `<hr class="r-rule"><p class="r-note r-center">Per ora solo gruppi locali: il cloud condiviso<br>si attiva collegando Firebase (vedi README).</p>` : ''}
   </div><div class="perf"></div></div>`;
   return `<div class="terminal"><div class="screen">
@@ -307,6 +306,8 @@ function newGroupView() {
         <input class="f-input" id="myname" required maxlength="20" placeholder="Es. Gio">
         <label class="f-label" for="othernames">Gli altri (separati da virgola)</label>
         <input class="f-input" id="othernames" placeholder="Es. Anna, Marco">
+        <label class="f-label" for="ownercode">Codice proprietario</label>
+        <input class="f-input" id="ownercode" placeholder="Riservato a chi gestisce l'app" value="${esc(localStorage.getItem('batti:ownerkey') || '')}">
         ${canCloud ? `
         <span class="f-label">Dove vive il gruppo</span>
         <div class="seg" role="group">
@@ -1042,7 +1043,7 @@ const ACTS = {
         const oldGid = S.gid;
         const m = structuredClone(meta());
         const exps = structuredClone(expenses());
-        const newId = await db.createGroup({ name: m.name, members: m.members, categories: m.categories, cloud: true });
+        const newId = await db.createGroup({ name: m.name, members: m.members, categories: m.categories, cloud: true, ownerKey: localStorage.getItem('batti:ownerkey') || '' });
         await db.updateMeta(newId, { budgets: m.budgets || {}, recurring: m.recurring || [] });
         for (const e of exps) { const { id, ...rest } = e; await db.saveExpense(newId, { id, ...rest }); }
         const me = db.getMe(oldGid);
@@ -1072,12 +1073,18 @@ const SUBMITS = {
     if (!name || !my) return;
     const cloudBtn = document.querySelector('[data-act="ng-cloud"][aria-pressed="true"]');
     const cloud = db.hasCloud && (!cloudBtn || cloudBtn.dataset.v === '1');
+    const ownerKey = document.getElementById('ownercode')?.value.trim() || '';
     const ms = [my, ...others].slice(0, 12).map((n, i) => ({ id: db.uid().slice(0, 8), name: n.slice(0, 20), c: i % MCOLORS.length }));
     try {
-      const id = await db.createGroup({ name, members: ms, categories: DEFAULT_CATS, cloud });
+      const id = await db.createGroup({ name, members: ms, categories: DEFAULT_CATS, cloud, ownerKey });
+      if (cloud && ownerKey) localStorage.setItem('batti:ownerkey', ownerKey);
       db.setMe(id, ms[0].id);
       nav(`#/g/${id}`);
-    } catch (e) { toast(`Non riesco a creare il gruppo: ${e.message}`); }
+    } catch (e) {
+      toast(String(e.code || e.message).includes('permission')
+        ? 'Codice proprietario sbagliato: la creazione dei gruppi è riservata.'
+        : `Non riesco a creare il gruppo: ${e.message}`);
+    }
   },
   'join-code': () => {
     const v = document.getElementById('jcode').value.trim();

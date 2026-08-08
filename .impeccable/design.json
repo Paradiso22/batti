@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-08T19:26:58Z",
+  "title": "Design System: Batti",
+  "extensions": {
+    "colorMeta": {
+      "green": { "role": "primary", "displayName": "Verde POS", "canonical": "#1f8a4c", "tonalRamp": ["color-mix(in oklch, #1f8a4c, black 72%)", "color-mix(in oklch, #1f8a4c, black 54%)", "color-mix(in oklch, #1f8a4c, black 36%)", "color-mix(in oklch, #1f8a4c, black 18%)", "#1f8a4c", "color-mix(in oklch, #1f8a4c, white 25%)", "color-mix(in oklch, #1f8a4c, white 50%)", "color-mix(in oklch, #1f8a4c, white 75%)"] },
+      "red": { "role": "secondary", "displayName": "Rosso annulla", "canonical": "#c6392f", "tonalRamp": ["color-mix(in oklch, #c6392f, black 72%)", "color-mix(in oklch, #c6392f, black 54%)", "color-mix(in oklch, #c6392f, black 36%)", "color-mix(in oklch, #c6392f, black 18%)", "#c6392f", "color-mix(in oklch, #c6392f, white 25%)", "color-mix(in oklch, #c6392f, white 50%)", "color-mix(in oklch, #c6392f, white 75%)"] },
+      "yellow": { "role": "secondary", "displayName": "Giallo correzione", "canonical": "#e8b93c", "tonalRamp": ["color-mix(in oklch, #e8b93c, black 72%)", "color-mix(in oklch, #e8b93c, black 54%)", "color-mix(in oklch, #e8b93c, black 36%)", "color-mix(in oklch, #e8b93c, black 18%)", "#e8b93c", "color-mix(in oklch, #e8b93c, white 25%)", "color-mix(in oklch, #e8b93c, white 50%)", "color-mix(in oklch, #e8b93c, white 75%)"] },
+      "key-bone": { "role": "neutral", "displayName": "Tasto osso", "canonical": "#d9d5c9", "tonalRamp": ["#34302a", "#6c675c", "#a8a292", "#c8c3b5", "#d9d5c9", "#e8e5dc", "#f1efe8", "#faf9f5"] },
+      "paper": { "role": "neutral", "displayName": "Carta termica", "canonical": "#f7f5ef", "tonalRamp": ["#272419", "#6c6757", "#a49d8a", "#beb7a2", "#eae6d9", "#f7f5ef", "#fbfaf6", "#fefdfb"] },
+      "ink": { "role": "neutral", "displayName": "Inchiostro", "canonical": "#272419", "tonalRamp": ["#131209", "#272419", "#4a4535", "#6c6757", "#8d8775", "#aea795", "#cfc9b8", "#e8e4d8"] },
+      "chassis-1": { "role": "neutral", "displayName": "Chassis gunmetal", "canonical": "#22252a", "tonalRamp": ["#131518", "#22252a", "#2c3036", "#3a3f47", "#565c66", "#969ca8", "#ccd1d9", "#e6e9ee"] },
+      "silk": { "role": "neutral", "displayName": "Serigrafia", "canonical": "#ccd1d9", "tonalRamp": ["#22252a", "#3a3f47", "#565c66", "#767d89", "#969ca8", "#ccd1d9", "#e0e4ea", "#f2f4f7"] },
+      "lcd-on": { "role": "primary", "displayName": "Fosforo acceso", "canonical": "#a6f2a4", "tonalRamp": ["#131a14", "#1c2a1e", "#2e4030", "#4c7050", "#6fae70", "#a6f2a4", "#c5f7c4", "#e2fbe1"] },
+      "lcd-amber": { "role": "secondary", "displayName": "Ambra LCD", "canonical": "#f0c46a", "tonalRamp": ["#403822", "#6b5a2a", "#a87e14", "#d0a344", "#f0c46a", "#f2cb5e", "#f7dd9a", "#fbeecd"] },
+      "m1": { "role": "tertiary", "displayName": "Maglia 1 · blu", "canonical": "#2f6bd8", "tonalRamp": ["color-mix(in oklch, #2f6bd8, black 72%)", "color-mix(in oklch, #2f6bd8, black 54%)", "color-mix(in oklch, #2f6bd8, black 36%)", "color-mix(in oklch, #2f6bd8, black 18%)", "#2f6bd8", "color-mix(in oklch, #2f6bd8, white 25%)", "color-mix(in oklch, #2f6bd8, white 50%)", "color-mix(in oklch, #2f6bd8, white 75%)"] },
+      "m2": { "role": "tertiary", "displayName": "Maglia 2 · arancio", "canonical": "#c76a10", "tonalRamp": ["color-mix(in oklch, #c76a10, black 72%)", "color-mix(in oklch, #c76a10, black 54%)", "color-mix(in oklch, #c76a10, black 36%)", "color-mix(in oklch, #c76a10, black 18%)", "#c76a10", "color-mix(in oklch, #c76a10, white 25%)", "color-mix(in oklch, #c76a10, white 50%)", "color-mix(in oklch, #c76a10, white 75%)"] },
+      "m3": { "role": "tertiary", "displayName": "Maglia 3 · teal", "canonical": "#0e9488", "tonalRamp": ["color-mix(in oklch, #0e9488, black 72%)", "color-mix(in oklch, #0e9488, black 54%)", "color-mix(in oklch, #0e9488, black 36%)", "color-mix(in oklch, #0e9488, black 18%)", "#0e9488", "color-mix(in oklch, #0e9488, white 25%)", "color-mix(in oklch, #0e9488, white 50%)", "color-mix(in oklch, #0e9488, white 75%)"] },
+      "m4": { "role": "tertiary", "displayName": "Maglia 4 · viola", "canonical": "#8a4fc9", "tonalRamp": ["color-mix(in oklch, #8a4fc9, black 72%)", "color-mix(in oklch, #8a4fc9, black 54%)", "color-mix(in oklch, #8a4fc9, black 36%)", "color-mix(in oklch, #8a4fc9, black 18%)", "#8a4fc9", "color-mix(in oklch, #8a4fc9, white 25%)", "color-mix(in oklch, #8a4fc9, white 50%)", "color-mix(in oklch, #8a4fc9, white 75%)"] },
+      "m5": { "role": "tertiary", "displayName": "Maglia 5 · oliva", "canonical": "#8a7a1f", "tonalRamp": ["color-mix(in oklch, #8a7a1f, black 72%)", "color-mix(in oklch, #8a7a1f, black 54%)", "color-mix(in oklch, #8a7a1f, black 36%)", "color-mix(in oklch, #8a7a1f, black 18%)", "#8a7a1f", "color-mix(in oklch, #8a7a1f, white 25%)", "color-mix(in oklch, #8a7a1f, white 50%)", "color-mix(in oklch, #8a7a1f, white 75%)"] },
+      "m6": { "role": "tertiary", "displayName": "Maglia 6 · rosa", "canonical": "#c94f7c", "tonalRamp": ["color-mix(in oklch, #c94f7c, black 72%)", "color-mix(in oklch, #c94f7c, black 54%)", "color-mix(in oklch, #c94f7c, black 36%)", "color-mix(in oklch, #c94f7c, black 18%)", "#c94f7c", "color-mix(in oklch, #c94f7c, white 25%)", "color-mix(in oklch, #c94f7c, white 50%)", "color-mix(in oklch, #c94f7c, white 75%)"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "LCD digits", "purpose": "Seven-segment amounts on the LCD only, with 8-ghost underlay and phosphor glow." },
+      "title": { "displayName": "Receipt title", "purpose": "Centered uppercase headers on paper slips." },
+      "body": { "displayName": "Receipt body", "purpose": "Expense descriptions and all printed data; amounts add 700 weight and tabular-nums." },
+      "label": { "displayName": "Silkscreen", "purpose": "Key caps, nav keys, sheet titles — the machine's own labels on chassis and rubber." },
+      "label-mono": { "displayName": "Form label", "purpose": "Uppercase mono micro-labels above inputs on paper." },
+      "ui": { "displayName": "Base UI", "purpose": "Barlow fallback surface; 16px inputs (prevents iOS zoom)." }
+    },
+    "shadows": [
+      { "name": "key-ledge-rest", "value": "0 4px 0 var(--key-bone-lo), 0 6px 12px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.5)", "purpose": "Rubber key at rest; swap ledge color for --green-lo/--red-lo/--yellow-lo per variant." },
+      { "name": "key-ledge-pressed", "value": "0 1px 0 var(--key-bone-lo), 0 2px 5px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.5)", "purpose": "Pressed key, paired with translateY(3px)." },
+      { "name": "nav-key-ledge", "value": "0 3px 0 #17191d, 0 4px 8px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.07)", "purpose": "Chassis nav keys; pressed collapses to 1px + translateY(2px)." },
+      { "name": "lcd-well", "value": "inset 0 2px 8px rgba(0,0,0,.75), inset 0 -1px 0 rgba(166,242,164,.05), 0 1px 0 rgba(255,255,255,.06)", "purpose": "Display glass recessed into the chassis." },
+      { "name": "paper-drop", "value": "0 6px 18px rgba(0,0,0,.45), 0 1px 4px rgba(0,0,0,.4)", "purpose": "Paper slip above the housing; perforated slips use filter: drop-shadow(0 6px 14px rgba(0,0,0,.4)) instead." },
+      { "name": "sheet", "value": "0 -14px 40px rgba(0,0,0,.55)", "purpose": "Bottom sheet over the terminal." },
+      { "name": "toast", "value": "0 8px 24px rgba(0,0,0,.5)", "purpose": "Status toast." },
+      { "name": "shell", "value": "0 30px 80px rgba(0,0,0,.6), 0 4px 16px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06)", "purpose": "Device body on the desk (>=720px)." }
+    ],
+    "motion": [
+      { "name": "feed", "value": "feed 480ms steps(8) both — translateY(-16px)->0 + clip-path inset(0 0 85% 0)->0", "purpose": "THE authored moment: a new expense prints onto the receipt like a dot-matrix head; only on just-saved rows." },
+      { "name": "sheetup", "value": "sheetup 240ms cubic-bezier(.2,.9,.3,1) both — translateY(40%), opacity .4 -> rest", "purpose": "Bottom sheets rise." },
+      { "name": "toastin", "value": "toastin 200ms ease-out — translateY(8px), opacity 0 -> rest", "purpose": "Toast entry." },
+      { "name": "lcdblink", "value": "lcdblink 360ms steps(2) 2 — caption opacity to .25", "purpose": "LCD caption blink after a print." },
+      { "name": "key-travel", "value": "transform/box-shadow 70ms ease-out", "purpose": "Key press travel; all motion disabled under prefers-reduced-motion." }
+    ],
+    "breakpoints": [
+      { "name": "desk", "value": "720px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Key — Green (conferma)",
+      "kind": "button",
+      "refersTo": "key-green",
+      "description": "The confirm key: BATTI, Conferma, Esegui. Green means confirm, always.",
+      "html": "<button class=\"ds-key-green\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4.5 12.5 10 18 19.5 6.5\"/></svg> Conferma</button>",
+      "css": ".ds-key-green { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 13px 16px; border: 0; cursor: pointer; font-family: 'Barlow Semi Condensed', 'Barlow', system-ui, sans-serif; font-weight: 700; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; border-radius: 12px; color: #fff; background: linear-gradient(180deg, var(--green-hi, #29a35d), var(--green, #1f8a4c)); box-shadow: 0 4px 0 var(--green-lo, #135c33), 0 6px 12px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.25); transition: transform 70ms ease-out, box-shadow 70ms ease-out; user-select: none; } .ds-key-green:hover { filter: brightness(1.05); } .ds-key-green:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--green-lo, #135c33), 0 2px 5px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.25); } .ds-key-green:focus-visible { outline: 2px solid var(--yellow, #e8b93c); outline-offset: 2px; }"
+    },
+    {
+      "name": "Key — Bone (neutra)",
+      "kind": "button",
+      "refersTo": "key-bone",
+      "description": "Neutral rubber key for non-signal actions (Copia link, digits on the pad).",
+      "html": "<button class=\"ds-key-bone\">Copia link</button>",
+      "css": ".ds-key-bone { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 13px 16px; border: 0; cursor: pointer; font-family: 'Barlow Semi Condensed', 'Barlow', system-ui, sans-serif; font-weight: 700; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; border-radius: 12px; color: var(--key-ink, #34302a); background: linear-gradient(180deg, var(--key-bone-hi, #e8e5dc), var(--key-bone, #d9d5c9)); box-shadow: 0 4px 0 var(--key-bone-lo, #a8a292), 0 6px 12px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.5); transition: transform 70ms ease-out, box-shadow 70ms ease-out; user-select: none; } .ds-key-bone:hover { filter: brightness(1.05); } .ds-key-bone:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--key-bone-lo, #a8a292), 0 2px 5px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.5); } .ds-key-bone:focus-visible { outline: 2px solid var(--yellow, #e8b93c); outline-offset: 2px; }"
+    },
+    {
+      "name": "LCD display",
+      "kind": "custom",
+      "refersTo": "lcd",
+      "description": "Phosphor status glass: context line, caption + segment digits over an 8-ghost, LED sync line. Amber variant for debt/warning.",
+      "html": "<div class=\"ds-lcd\"><div class=\"ds-lcd-top\"><span>Casa Demo</span><b>VEN 08/08</b></div><div class=\"ds-lcd-main\"><span class=\"ds-lcd-caption\">TI DEVONO</span><span class=\"ds-lcd-num\"><span class=\"ds-lcd-ghost\" aria-hidden=\"true\">88.88</span><span class=\"ds-lcd-lit\">43.70</span></span></div><div class=\"ds-lcd-sub\"><span class=\"ds-led\"></span> SINCRONIZZATO</div></div>",
+      "css": ".ds-lcd { position: relative; border-radius: 10px; padding: 12px 14px 10px; background: linear-gradient(168deg, var(--lcd-1, #1c2a1e) 0%, var(--lcd-0, #131a14) 82%); border: 1px solid #0b0e0b; box-shadow: inset 0 2px 8px rgba(0,0,0,.75), inset 0 -1px 0 rgba(166,242,164,.05), 0 1px 0 rgba(255,255,255,.06); color: var(--lcd-on, #a6f2a4); overflow: hidden; max-width: 340px; } .ds-lcd::after { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,0) 26%); pointer-events: none; } .ds-lcd-top { display: flex; justify-content: space-between; gap: 8px; font-family: 'Azeret Mono', ui-monospace, monospace; font-size: 11px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; color: var(--lcd-mid, #6fae70); } .ds-lcd-top b { color: var(--lcd-on, #a6f2a4); font-weight: 700; } .ds-lcd-main { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 8px; min-height: 44px; } .ds-lcd-caption { font-family: 'Azeret Mono', ui-monospace, monospace; font-size: 12px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; } .ds-lcd-num { position: relative; font-family: 'DSEG7', 'Azeret Mono', monospace; font-size: 32px; font-weight: 700; line-height: 1; text-shadow: 0 0 10px rgba(166,242,164,.35); } .ds-lcd-ghost { position: absolute; right: 0; top: 0; color: var(--lcd-dim, #2e4030); text-shadow: none; user-select: none; } .ds-lcd-lit { position: relative; } .ds-lcd-sub { margin-top: 7px; display: flex; align-items: center; gap: 7px; font-family: 'Azeret Mono', ui-monospace, monospace; font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--lcd-mid, #6fae70); } .ds-led { width: 7px; height: 7px; border-radius: 50%; background: #59e07c; box-shadow: 0 0 6px 1px rgba(89,224,124,.7); }"
+    },
+    {
+      "name": "Receipt slip",
+      "kind": "card",
+      "refersTo": "paper-slip",
+      "description": "Perforated thermal-paper record: banded ivory paper, dashed rules, mono rows, printed total.",
+      "html": "<div class=\"ds-perfwrap\"><div class=\"ds-perf ds-perf-top\"></div><div class=\"ds-paper\"><div class=\"ds-rhead\"><div class=\"ds-rtitle\">Casa Demo</div><div class=\"ds-rmeta\">Documento gestionale · 3 persone</div></div><hr class=\"ds-rrule\"><button class=\"ds-rrow\"><span class=\"ds-ric\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 4h2l2.4 11.2a1.5 1.5 0 0 0 1.5 1.2h7.6a1.5 1.5 0 0 0 1.5-1.1L20 8H6.2M9.5 20.2a.9.9 0 1 1-1.8 0 .9.9 0 0 1 1.8 0Zm8.5 0a.9.9 0 1 1-1.8 0 .9.9 0 0 1 1.8 0Z\"/></svg></span><span><span class=\"ds-rdesc\">Esselunga</span><span class=\"ds-rwho\">Gio · diviso ×2</span></span><span class=\"ds-amt\">87,40<small> €</small></span></button><hr class=\"ds-rrule ds-solid\"><div class=\"ds-rtotal\"><span>Totale agosto 2026</span><span class=\"ds-amt\">87,40<small> €</small></span></div></div><div class=\"ds-perf\"></div></div>",
+      "css": ".ds-perfwrap { max-width: 340px; filter: drop-shadow(0 6px 14px rgba(0,0,0,.4)); font-family: 'Azeret Mono', ui-monospace, monospace; } .ds-paper { background: repeating-linear-gradient(0deg, rgba(120,105,70,.028) 0 2px, rgba(0,0,0,0) 2px 5px), var(--paper, #f7f5ef); color: var(--ink, #272419); padding: 14px 16px 18px; } .ds-perf { height: 7px; background: linear-gradient(-45deg, var(--paper, #f7f5ef) 5px, transparent 0), linear-gradient(45deg, var(--paper, #f7f5ef) 5px, transparent 0); background-size: 9px 9px; background-repeat: repeat-x; } .ds-perf-top { transform: scaleY(-1); } .ds-rhead { text-align: center; } .ds-rtitle { font-size: 15px; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; } .ds-rmeta { margin-top: 3px; font-size: 10px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-2, #6c6757); } .ds-rrule { border: 0; border-top: 1px dashed var(--line, #beb7a2); margin: 10px 0; } .ds-rrule.ds-solid { border-top-style: solid; } .ds-rrow { display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: center; width: 100%; text-align: left; padding: 9px 0; border: 0; background: none; cursor: pointer; font: inherit; color: inherit; } .ds-rrow:active { background: rgba(0,0,0,.035); } .ds-ric { color: var(--ink-2, #6c6757); } .ds-rdesc { display: block; font-size: 13.5px; font-weight: 500; line-height: 1.25; } .ds-rwho { display: block; margin-top: 2px; font-size: 10.5px; color: var(--ink-2, #6c6757); letter-spacing: .04em; } .ds-amt { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; } .ds-amt small { font-weight: 500; font-size: 10px; color: var(--ink-2, #6c6757); } .ds-rtotal { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding-top: 10px; }"
+    },
+    {
+      "name": "Nav key (active)",
+      "kind": "nav",
+      "refersTo": "nav-key",
+      "description": "Chassis navigation key: icon, silkscreen label, status dot. Active page lights the dot green and the label silk.",
+      "html": "<a class=\"ds-navkey\" href=\"#\" aria-current=\"page\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 3h12v18l-2-1.4L14 21l-2-1.4L10 21l-2-1.4L6 21V3ZM9 8h6M9 12h6M9 16h3\"/></svg><span>Spese</span><span class=\"ds-dot\"></span></a>",
+      "css": ".ds-navkey { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; width: 76px; padding: 8px 2px 7px; border-radius: 10px; text-decoration: none; background: linear-gradient(180deg, var(--chassis-3, #3a3f47), var(--chassis-2, #2c3036)); box-shadow: 0 3px 0 #17191d, 0 4px 8px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.07); color: var(--silk-dim, #969ca8); font-family: 'Barlow Semi Condensed', 'Barlow', system-ui, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; transition: transform 70ms ease-out, box-shadow 70ms ease-out; } .ds-navkey:hover { color: var(--silk, #ccd1d9); } .ds-navkey:active { transform: translateY(2px); box-shadow: 0 1px 0 #17191d, 0 2px 4px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.07); } .ds-navkey .ds-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(0,0,0,.45); box-shadow: inset 0 1px 1px rgba(0,0,0,.6); } .ds-navkey[aria-current=\"page\"] { color: var(--silk, #ccd1d9); } .ds-navkey[aria-current=\"page\"] .ds-dot { background: #59e07c; box-shadow: 0 0 5px 1px rgba(89,224,124,.65); }"
+    },
+    {
+      "name": "Member chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Member selector on paper: identity dot in the member's fixed color; selected state rings the chip in that color and inks the check.",
+      "html": "<span style=\"display:inline-flex;gap:8px;background:var(--paper,#f7f5ef);padding:12px;\"><button class=\"ds-chip\" style=\"--mcol:#2f6bd8\" aria-pressed=\"true\"><span class=\"ds-cdot\"></span>Gio</button><button class=\"ds-chip\" style=\"--mcol:#c76a10\" aria-pressed=\"false\"><span class=\"ds-cdot\"></span>Anna</button></span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 7px; font-family: 'Azeret Mono', ui-monospace, monospace; font-size: 13px; font-weight: 500; color: var(--ink, #272419); border: 1.5px solid var(--line, #beb7a2); border-radius: 999px; padding: 7px 12px; background: rgba(255,255,255,.35); cursor: pointer; } .ds-chip .ds-cdot { width: 9px; height: 9px; border-radius: 50%; background: var(--mcol, #6c6757); } .ds-chip::after { content: '\\2713'; font-weight: 700; color: transparent; } .ds-chip[aria-pressed=\"true\"] { border-color: var(--mcol); box-shadow: inset 0 0 0 1px var(--mcol); background: #fff; } .ds-chip[aria-pressed=\"true\"]::after { color: var(--mcol); } .ds-chip:focus-visible { outline: 2px solid var(--yellow, #e8b93c); outline-offset: 2px; }"
+    },
+    {
+      "name": "Form field on paper",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Mono micro-label over a transparent field with a paper-line underline; focus turns the underline green.",
+      "html": "<span style=\"display:block;max-width:300px;background:var(--paper,#f7f5ef);padding:14px 16px;\"><label class=\"ds-flabel\" for=\"ds-in\">Descrizione</label><input class=\"ds-finput\" id=\"ds-in\" placeholder=\"Esselunga…\"></span>",
+      "css": ".ds-flabel { display: block; font-family: 'Azeret Mono', ui-monospace, monospace; font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2, #6c6757); margin-bottom: 6px; } .ds-finput { width: 100%; background: transparent; border: 0; border-bottom: 1px solid var(--line, #beb7a2); border-radius: 0; padding: 6px 2px; font-family: 'Azeret Mono', ui-monospace, monospace; font-size: 16px; color: var(--ink, #272419); } .ds-finput:focus { outline: none; border-bottom-color: var(--green, #1f8a4c); box-shadow: 0 1px 0 var(--green, #1f8a4c); } .ds-finput::placeholder { color: #a49d8a; }"
+    },
+    {
+      "name": "Segmented control",
+      "kind": "custom",
+      "refersTo": "seg",
+      "description": "Split-mode selector on paper; the pressed segment inverts to ink-on-paper.",
+      "html": "<div class=\"ds-seg\"><button aria-pressed=\"true\">Uguale</button><button aria-pressed=\"false\">Importi</button><button aria-pressed=\"false\">%</button></div>",
+      "css": ".ds-seg { display: inline-flex; width: 300px; border: 1.5px solid var(--line, #beb7a2); border-radius: 9px; overflow: hidden; background: var(--paper, #f7f5ef); } .ds-seg button { flex: 1; padding: 8px 4px; border: 0; background: none; cursor: pointer; font-family: 'Azeret Mono', ui-monospace, monospace; font-size: 11.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2, #6c6757); border-right: 1.5px solid var(--line, #beb7a2); } .ds-seg button:last-child { border-right: 0; } .ds-seg button[aria-pressed=\"true\"] { background: var(--ink, #272419); color: var(--paper, #f7f5ef); font-weight: 700; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Il POS di casa",
+    "overview": "The app is a domestic POS terminal: the whole UI is one physical object — a gunmetal Italian bancomat that prints household expenses on ivory thermal paper. The direction contract (verbatim from index.html): THESIS — registrare una spesa e battere uno scontrino; rifiuta il layout fintech a card pastello con tab bar. OWN-WORLD — chassis gunmetal con tasti in gomma (verde conferma, rosso annulla, giallo correzione), display LCD a segmenti verde fosforo, record su carta termica avorio in mono da scontrino, grottesco serigrafato per le etichette chassis. STORY — apri e leggi sul display chi deve cosa; batti l'importo, confermi col tasto verde, la spesa si stampa sullo scontrino. FIRST VIEWPORT — LCD in alto, scontrino sotto, navigazione e tasto verde BATTI in basso. FORM — POS/bancomat italiano + scontrino termico. Every surface belongs to one of three materials: chassis (dark housing: navigation, sheets, toasts), LCD (phosphor-green status glass), paper (all data records). Nothing floats in an abstract app-space.",
+    "keyCharacteristics": [
+      "One terminal, three materials; every element states which one it is made of.",
+      "Rubber keys with real travel; data printed in receipt mono; status glows on glass.",
+      "Italian receipt voice: uppercase, letter-spaced, dashed rules, · separators, ✻ dingbats."
+    ],
+    "rules": [
+      { "name": "The Traffic-Light Rule", "body": "Green means confirm, red means cancel/destroy, yellow means correct. A key's color is its meaning; never use these hues for decoration or emphasis.", "section": "colors" },
+      { "name": "The Fixed Jersey Rule", "body": "A member's color is MCOLORS[member.c % 6] — assigned at creation, stored on the member, identical in every chip, dot, stackbar and legend. Never reassign or restyle it.", "section": "colors" },
+      { "name": "The LCD-Only Rule", "body": "DSEG7 renders LCD digits and nothing else. Data must always be legible: records, amounts and forms are Azeret Mono — the pixel/segment look is reserved for the display glass.", "section": "typography" },
+      { "name": "The Rubber Ledge Rule", "body": "Anything pressable has a visible ledge and loses it when pressed: :active translates down (3px keys, 2px nav keys) while the ledge shadow collapses from 4px/3px to 1px, in 70ms ease-out. No ledge, not a key.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep every money value in integer cents end-to-end; render with fmtCents (it-IT, always 2 decimals) in tabular-nums mono, € as a small suffix.",
+      "Do assign every new surface to a material: data prints on paper, controls are rubber keys, status glows on the LCD, housing is chassis.",
+      "Do use aria-pressed for selection states, aria-current=\"page\" for nav, and the yellow focus-visible outline everywhere.",
+      "Do speak the receipt voice for machine text: Italian, uppercase, letter-spaced mono, · separators, dashed rules."
+    ],
+    "donts": [
+      "Don't use emoji as icons — only the PATHS 1.75-stroke set (✻ and ✓ are typographic glyphs, not icons).",
+      "Don't put DSEG7 or fake-pixel type on data; segment rendering belongs to the LCD alone.",
+      "Don't break the Traffic-Light or Fixed Jersey rules: signal hues carry meaning, member colors are identity.",
+      "Don't reintroduce the rejected world: no pastel fintech cards, no floating tab bar, no shadows-as-decoration, no rounded paper."
+    ]
+  }
+}

@@ -37,7 +37,7 @@ const DEFAULT_CATS = [
   { id: 'spesa', name: 'Spesa', icon: 'cart' },
   { id: 'casa', name: 'Casa', icon: 'home' },
   { id: 'bollette', name: 'Bollette', icon: 'bolt' },
-  { id: 'fuori', name: 'Mangiar fuori', icon: 'food' },
+  { id: 'fuori', name: 'Fuori', icon: 'food' },
   { id: 'trasporti', name: 'Trasporti', icon: 'car' },
   { id: 'svago', name: 'Svago', icon: 'fun' },
   { id: 'salute', name: 'Salute', icon: 'health' },
@@ -104,7 +104,47 @@ function shiftMonth(mk, delta) {
 
 /* ---------- routing e dati ---------- */
 function parseRoute() {
-  return location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  const [path, flag] = location.hash.replace(/^#\/?/, '').split('!');
+  S.flag = flag || null;
+  return path.split('/').filter(Boolean);
+}
+
+// #/demo[/tab][!pad|!detail] — gruppo locale d'esempio per provare l'app
+function seedDemo() {
+  const gid = 'local-demo';
+  if (!localStorage.getItem(`batti:data:${gid}`)) {
+    const ms = [['Gio', 0], ['Anna', 1], ['Marco', 2]].map(([name, c]) => ({ id: `demo-${c}`, name, c }));
+    const [gio, anna, marco] = ms.map(m => m.id);
+    const today = todayISO();
+    const mk = monthKey(today), prev = shiftMonth(mk, -1);
+    const E = (id, desc, amount, paidBy, ids, catId, date, extra = {}) => ({
+      id, desc, amount, paidBy, shares: computeShares(amount, ids), catId, date, createdAt: Date.now(), ...extra,
+    });
+    const expenses = [
+      E('d1', 'Esselunga', 8740, gio, [gio, anna], 'spesa', `${mk}-02`),
+      E('d2', 'Pizza da Michele', 5400, anna, [gio, anna, marco], 'fuori', `${mk}-03`),
+      E('d3', 'Benzina', 6000, marco, [gio, marco], 'trasporti', `${mk}-04`),
+      E('d4', 'Bolletta luce', 9820, gio, [gio, anna], 'bollette', `${mk}-05`),
+      E('d5', 'Cinema', 2400, anna, [gio, anna], 'svago', `${mk}-06`),
+      E('d6', 'Farmacia', 1830, gio, [gio], 'salute', `${mk}-06`),
+      E('d7', 'Spesa Lidl', 4620, anna, [gio, anna], 'spesa', `${mk}-07`),
+      E('d8', 'Treno Milano', 7800, marco, [gio, anna, marco], 'viaggi', `${mk}-08`),
+      E('p1', 'Esselunga', 11250, gio, [gio, anna], 'spesa', `${prev}-05`),
+      E('p2', 'Sushi', 6800, anna, [gio, anna], 'fuori', `${prev}-12`),
+      E('p3', 'Bolletta gas', 12400, gio, [gio, anna], 'bollette', `${prev}-15`),
+      E('p4', 'Ikea mensole', 8900, anna, [gio, anna], 'casa', `${prev}-20`),
+      E('p5', 'Rimborso', 5000, anna, [gio], 'altro', `${prev}-28`, { isTransfer: true, shares: { [gio]: 5000 } }),
+    ];
+    const meta = {
+      name: 'Casa Demo', members: ms, categories: DEFAULT_CATS,
+      budgets: { spesa: 40000, fuori: 15000, svago: 8000, bollette: 25000 },
+      recurring: [{ id: 'demo-rec', desc: 'Affitto', amount: 78000, paidBy: gio, shares: computeShares(78000, [gio, anna]), catId: 'casa', dayOfMonth: 1, startMonth: prev }],
+      createdAt: Date.now(),
+    };
+    localStorage.setItem(`batti:data:${gid}`, JSON.stringify({ meta, expenses }));
+    db.setMe(gid, gio);
+  }
+  db.rememberGroup({ id: gid, name: 'Casa Demo', cloud: false });
 }
 
 function ensureGroup(gid) {
@@ -139,6 +179,13 @@ addEventListener('offline', () => { S.online = false; render(); });
 function route() {
   S.route = parseRoute();
   const [a, b] = S.route;
+  if (a === 'g' && !S.route[2]) S.month = monthKey(todayISO()); // lo scontrino torna sempre al mese corrente
+  if (a === 'demo') {
+    seedDemo();
+    const rest = S.route.slice(1).join('/');
+    location.replace(`#/g/local-demo${rest ? '/' + rest : ''}${S.flag ? '!' + S.flag : ''}`);
+    return;
+  }
   if (a === 'g' && b) ensureGroup(b);
   else if (a === 'join' && b) loadJoin(b);
   else { S.unsub?.(); S.unsub = null; S.gid = null; S.data = null; }
@@ -185,7 +232,7 @@ function syncSub() {
 function navBar(tab) {
   const gid = S.gid;
   const items = [
-    ['scontrino', 'receipt', 'Scontrino', `#/g/${gid}`],
+    ['scontrino', 'receipt', 'Spese', `#/g/${gid}`],
     ['saldi', 'swap', 'Saldi', `#/g/${gid}/saldi`],
     ['buste', 'wallet', 'Buste', `#/g/${gid}/buste`],
     ['stats', 'chart', 'Stats', `#/g/${gid}/stats`],
@@ -230,7 +277,7 @@ function homeView() {
       <p>Crea il primo gruppo per la coppia,<br>la casa o il viaggio con gli amici.</p></div>`}
     <div class="key-row"><button class="key key--green key--wide" data-act="go-new">${icon('plus', 18)} Nuovo gruppo</button></div>
     <div class="key-row"><button class="key key--wide" data-act="go-join">${icon('link', 18)} Entra con un codice</button></div>
-    ${!db.hasCloud ? `<hr class="r-rule"><p class="r-note r-center">Cloud non ancora configurato: i gruppi condivisi tra più telefoni<br>si attivano collegando Firebase (vedi README).</p>` : ''}
+    ${!db.hasCloud ? `<hr class="r-rule"><p class="r-note r-center">Per ora solo gruppi locali: il cloud condiviso<br>si attiva collegando Firebase (vedi README).</p>` : ''}
   </div><div class="perf"></div></div>`;
   return `<div class="terminal"><div class="screen">
     ${lcd({ line1: 'Batti', line1b: new Date().toLocaleDateString('it-IT'), caption: 'BENVENUTO', sub: `<span class="led ${S.online ? 'on' : 'amber'}"></span> ${db.hasCloud ? (S.online ? 'PRONTO' : 'OFFLINE') : 'SOLO GRUPPI LOCALI'}` })}
@@ -323,7 +370,7 @@ function myBalanceLcd(tab) {
   const mine = me ? (bal[me] || 0) : 0;
   const caption = !me ? 'CIAO' : mine > 0 ? 'TI DEVONO' : mine < 0 ? 'DEVI' : 'SEI IN PARI';
   return lcd({
-    line1: meta().name, line1b: tab.toUpperCase(),
+    line1: meta().name, line1b: fmtDay(todayISO()),
     caption, num: me && mine !== 0 ? lcdFmt(Math.abs(mine)) : (me ? '0.00' : ''),
     amber: mine < 0, sub: syncSub(), flash: !!S.justPrinted,
   });
@@ -413,7 +460,7 @@ function busteView() {
   const totS = withB.reduce((t, c) => t + (spent[c.id] || 0), 0);
   const content = `
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
-    <div class="r-head"><div class="r-title">Buste del mese</div><div class="r-meta">budget per categoria · stile Goodbudget</div></div>
+    <div class="r-head"><div class="r-title">Buste del mese</div><div class="r-meta">budget per categoria · quanto resta</div></div>
     <hr class="r-rule">
     ${monthNav()}
     ${withB.length ? withB.map(c => {
@@ -596,7 +643,7 @@ function sheetHtml() {
   const sh = S.sheet;
   const wrap = inner => `<div class="sheet" role="dialog" aria-modal="true">
     <div class="sheet-back" data-act="close-sheet"></div>
-    <div class="sheet-panel"><div class="sheet-grip"></div>${inner}</div>
+    <div class="sheet-panel" tabindex="-1"><div class="sheet-grip"></div>${inner}</div>
   </div>`;
 
   if (sh.type === 'pad') {
@@ -608,7 +655,7 @@ function sheetHtml() {
       <div class="lcd"><div class="lcd-top"><span>${label}</span><b>EUR</b></div>
         <div class="lcd-main"><span class="lcd-caption"></span>
         <span class="lcd-num"><span class="ghost" aria-hidden="true">${num.replace(/\d/g, '8')}</span><span class="lit">${num}</span></span></div>
-        <div class="lcd-sub">BATTI L'IMPORTO IN CENTESIMI · 1250 = 12.50</div>
+        <div class="lcd-sub">IN CENTESIMI · 1250 = 12,50</div>
       </div>
       <div class="pad">${keys.map(k => k === 'bksp'
         ? `<button class="key" data-act="pad-back" aria-label="Cancella ultima cifra">${icon('bksp', 22)}</button>`
@@ -732,6 +779,17 @@ const memberIdsWithValues = d => members().map(m => m.id).filter(id => {
 /* ---------- render ---------- */
 function render() {
   const [a, b, c] = S.route;
+  if (S.flag && S.data && !S.sheet) { // apertura diretta di un foglio via URL (demo/QA)
+    if (S.flag === 'pad') S.sheet = { type: 'pad', draft: freshDraft() };
+    if (S.flag === 'detail') S.sheet = { type: 'detail', draft: { ...freshDraft(), amount: 2350 } };
+    S.flag = null;
+  }
+  // il focus sopravvive al re-render (tastierino usabile da tastiera)
+  const ae = document.activeElement;
+  const focusSel = ae?.dataset?.act
+    ? `[data-act="${ae.dataset.act}"]${ae.dataset.d ? `[data-d="${ae.dataset.d}"]` : ''}${ae.dataset.id ? `[data-id="${ae.dataset.id}"]` : ''}${ae.dataset.m ? `[data-m="${ae.dataset.m}"]` : ''}`
+    : null;
+  const hadSheet = !!document.querySelector('.sheet');
   let html;
   if (a === 'new') html = newGroupView();
   else if (a === 'join' && b) html = joinView();
@@ -742,6 +800,9 @@ function render() {
     else html = { undefined: receiptView, saldi: saldiView, buste: busteView, stats: statsView, altro: altroView }[c]?.() || receiptView();
   } else html = homeView();
   $app.innerHTML = html;
+  const sheetEl = document.querySelector('.sheet-panel');
+  if (sheetEl && !hadSheet) sheetEl.focus();            // foglio appena aperto
+  else if (focusSel) document.querySelector(focusSel)?.focus();
   if (S.justPrinted) setTimeout(() => { S.justPrinted = null; }, 600);
 }
 
@@ -826,12 +887,13 @@ const ACTS = {
   'edit-exp': el => {
     const e = expenses().find(x => x.id === el.dataset.id);
     if (!e) return;
-    const equalish = new Set(Object.values(e.shares)).size <= 2 && !e.isTransfer;
+    const equalish = !e.isTransfer
+      && JSON.stringify(e.shares) === JSON.stringify(computeShares(e.amount, Object.keys(e.shares)));
     S.sheet = {
       type: 'detail', draft: {
         amount: e.amount, desc: e.desc || '', catId: e.catId, paidBy: e.paidBy,
         splitMode: 'exact', selected: Object.keys(e.shares),
-        values: Object.fromEntries(Object.entries(e.shares).map(([id, v]) => [id, fmt(v)])),
+        values: Object.fromEntries(Object.entries(e.shares).map(([id, v]) => [id, (v / 100).toFixed(2).replace('.', ',')])),
         date: e.date, editId: e.id, createdAt: e.createdAt,
       },
     };
@@ -1058,6 +1120,9 @@ document.addEventListener('submit', e => {
   if (!form) return;
   e.preventDefault();
   SUBMITS[form.dataset.actSubmit]?.();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && S.sheet) { S.sheet = null; render(); }
 });
 document.addEventListener('input', e => {
   const d = S.sheet?.draft;

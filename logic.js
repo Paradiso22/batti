@@ -17,7 +17,7 @@ export function computeShares(amount, memberIds, mode = 'equal', values = {}) {
       shares[id] = v;
       sum += v;
     }
-    if (sum !== amount) throw new Error(`Le quote sommano ${(sum / 100).toFixed(2)}, non ${(amount / 100).toFixed(2)}`);
+    if (sum !== amount) throw new Error(`Le quote sommano ${fmtCents(sum)}, non ${fmtCents(amount)}`);
     return shares;
   }
 
@@ -107,9 +107,10 @@ export function fmtCents(cents) {
   return (cents / 100).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// '12,50' / '12.50' / '12' → 1250; null se non valido
+// '12,50' / '12.50' / '12' / '1.234,56' → centesimi; null se non valido
 export function parseAmount(str) {
-  const s = String(str).trim().replace(/\./g, m => m).replace(',', '.');
+  let s = String(str).trim();
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
   if (!/^\d+(\.\d{1,2})?$/.test(s)) return null;
   return Math.round(parseFloat(s) * 100);
 }

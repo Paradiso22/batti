@@ -57,6 +57,7 @@ assert.equal(parseAmount('12,50'), 1250);
 assert.equal(parseAmount('12.50'), 1250);
 assert.equal(parseAmount('12'), 1200);
 assert.equal(parseAmount('0,1'), 10);
+assert.equal(parseAmount('1.234,56'), 123456);
 assert.equal(parseAmount('abc'), null);
 assert.equal(parseAmount('12,505'), null);
 

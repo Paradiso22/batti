@@ -85,12 +85,14 @@ export function monthKey(date) {
 function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); } // m 1-based
 
 // Spese ricorrenti dovute e non ancora materializzate.
-// rec: {id, startMonth 'YYYY-MM', dayOfMonth, desc, amount, paidBy, shares, catId}
+// rec: {id, startMonth 'YYYY-MM', dayOfMonth, everyMonths?, desc, amount, paidBy, shares, catId}
+// everyMonths: cadenza in mesi (1 = mensile, 2, 3, 6, 12); il ciclo parte da startMonth.
 // today: 'YYYY-MM-DD'. Ritorna [{expenseId, date}] con id deterministico
 // rec_<id>_<YYYY-MM> — così due telefoni che scrivono insieme non duplicano.
 export function dueRecurring(rec, today) {
   const due = [];
   const curMonth = monthKey(today);
+  const every = rec.everyMonths || 1;
   let [y, m] = rec.startMonth.split('-').map(Number);
   for (let i = 0; i < 60; i++) {
     const mk = `${y}-${String(m).padStart(2, '0')}`;
@@ -98,7 +100,7 @@ export function dueRecurring(rec, today) {
     const day = Math.min(rec.dayOfMonth, daysInMonth(y, m));
     const date = `${mk}-${String(day).padStart(2, '0')}`;
     if (date <= today) due.push({ expenseId: `rec_${rec.id}_${mk}`, date });
-    m += 1; if (m > 12) { m = 1; y += 1; }
+    m += every; while (m > 12) { m -= 12; y += 1; }
   }
   return due;
 }

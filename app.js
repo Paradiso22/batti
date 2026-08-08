@@ -12,6 +12,7 @@ const PATHS = {
   fun: 'M4 9.5 6 20h12l2-10.5M4 9.5 12 4l8 5.5M4 9.5h16M9.5 13.5v3M14.5 13.5v3M12 13.5v3',
   health: 'M12 20s-7-4.3-7-9.5A4 4 0 0 1 12 8a4 4 0 0 1 7 2.5C19 15.7 12 20 12 20ZM12 10v4M10 12h4',
   travel: 'M10.5 20 13 13.5 19.5 11a1.4 1.4 0 0 0-.5-2.7L4 10.5l3.5 2.5 2 6.5.9.5ZM7.5 13 5 15',
+  bag: 'M5.5 8h13l-1 13h-11L5.5 8Zm3.5 0V6.5a3 3 0 0 1 6 0V8',
   box: 'M4 8l8-4 8 4v8l-8 4-8-4V8Zm0 0 8 4m0 0 8-4m-8 4v8',
   swap: 'M4 8h13m0 0-3.5-3.5M17 8l-3.5 3.5M20 16H7m0 0 3.5-3.5M7 16l3.5 3.5',
   plus: 'M12 5v14M5 12h14',
@@ -38,6 +39,7 @@ const DEFAULT_CATS = [
   { id: 'casa', name: 'Casa', icon: 'home' },
   { id: 'bollette', name: 'Bollette', icon: 'bolt' },
   { id: 'fuori', name: 'Fuori', icon: 'food' },
+  { id: 'shopping', name: 'Shopping', icon: 'bag' },
   { id: 'trasporti', name: 'Trasporti', icon: 'car' },
   { id: 'svago', name: 'Svago', icon: 'fun' },
   { id: 'salute', name: 'Salute', icon: 'health' },
@@ -46,6 +48,7 @@ const DEFAULT_CATS = [
 ];
 const MCOLORS = ['#2f6bd8', '#c76a10', '#0e9488', '#8a4fc9', '#8a7a1f', '#c94f7c'];
 const DOW = ['DOM', 'LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB'];
+const EVERY_LABEL = { 1: 'ogni mese', 2: 'ogni 2 mesi', 3: 'ogni 3 mesi', 6: 'ogni 6 mesi', 12: 'ogni anno' };
 const MONTHS = ['GENNAIO', 'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO', 'LUGLIO', 'AGOSTO', 'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE'];
 
 /* ---------- stato ---------- */
@@ -112,7 +115,12 @@ function parseRoute() {
 // #/demo[/tab][!pad|!detail] — gruppo locale d'esempio per provare l'app
 function seedDemo() {
   const gid = 'local-demo';
-  if (!localStorage.getItem(`batti:data:${gid}`)) {
+  const existing = localStorage.getItem(`batti:data:${gid}`);
+  if (existing) { // demo già esistente: aggiorna solo le categorie al set attuale, senza toccare le spese
+    if (!JSON.parse(existing).meta.categories.some(c => c.id === 'shopping')) {
+      db.updateMeta(gid, { categories: DEFAULT_CATS }); // passa dallo strato dati: notifica la vista
+    }
+  } else {
     const ms = [['Gio', 0], ['Anna', 1], ['Marco', 2]].map(([name, c]) => ({ id: `demo-${c}`, name, c }));
     const [gio, anna, marco] = ms.map(m => m.id);
     const today = todayISO();
@@ -128,6 +136,7 @@ function seedDemo() {
       E('d5', 'Cinema', 2400, anna, [gio, anna], 'svago', `${mk}-06`),
       E('d6', 'Farmacia', 1830, gio, [gio], 'salute', `${mk}-06`),
       E('d7', 'Spesa Lidl', 4620, anna, [gio, anna], 'spesa', `${mk}-07`),
+      E('d9', 'Zara', 3999, anna, [anna], 'shopping', `${mk}-07`),
       E('d8', 'Treno Milano', 7800, marco, [gio, anna, marco], 'viaggi', `${mk}-08`),
       E('p1', 'Esselunga', 11250, gio, [gio, anna], 'spesa', `${prev}-05`),
       E('p2', 'Sushi', 6800, anna, [gio, anna], 'fuori', `${prev}-12`),
@@ -606,12 +615,12 @@ function altroView() {
   </div><div class="perf"></div></div>
 
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
-    <span class="f-label">Spese ricorrenti — ogni mese, da sole</span>
+    <span class="f-label">Spese ricorrenti — si battono da sole</span>
     ${(m.recurring || []).length ? `<div class="setlist">${m.recurring.map(r => `<div class="li">
       ${icon(cat(r.catId).icon, 17)}
-      <span>${esc(r.desc)} <span class="sub">giorno ${r.dayOfMonth} · ${esc(mname(r.paidBy))} paga · ${fmt(r.amount)} €</span></span>
+      <span>${esc(r.desc)} <span class="sub">${EVERY_LABEL[r.everyMonths || 1]} il ${r.dayOfMonth} · ${esc(mname(r.paidBy))} paga · ${fmt(r.amount)} €</span></span>
       <button class="iconbtn danger" data-act="del-rec" data-id="${esc(r.id)}" aria-label="Elimina ricorrente">${icon('trash', 16)}</button>
-    </div>`).join('')}</div>` : `<p class="r-note">Affitto, bollette, abbonamenti: si battono da soli il giorno che scegli.</p>`}
+    </div>`).join('')}</div>` : `<p class="r-note">Affitto, bollette, abbonamenti: si battono da soli, con la cadenza che scegli (anche ogni 2, 3, 6 o 12 mesi).</p>`}
     <div class="key-row"><button class="key key--wide" data-act="open-rec">${icon('plus', 16)} Nuova ricorrente</button></div>
   </div><div class="perf"></div></div>
 
@@ -643,7 +652,7 @@ function sheetHtml() {
   const sh = S.sheet;
   const wrap = inner => `<div class="sheet" role="dialog" aria-modal="true">
     <div class="sheet-back" data-act="close-sheet"></div>
-    <div class="sheet-panel" tabindex="-1"><div class="sheet-grip"></div>${inner}</div>
+    <div class="sheet-panel${S.sheetWasOpen ? ' still' : ''}" tabindex="-1"><div class="sheet-grip"></div>${inner}</div>
   </div>`;
 
   if (sh.type === 'pad') {
@@ -728,6 +737,13 @@ function sheetHtml() {
           <div><label class="f-label" for="rday">Giorno del mese</label>
           <select class="f-input" id="rday">${Array.from({ length: 28 }, (_, i) => `<option ${d.day === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></div>
         </div>
+        <div class="f-row">
+          <div><label class="f-label" for="revery">Cadenza</label>
+          <select class="f-input" id="revery">${[1, 2, 3, 6, 12].map(n => `<option value="${n}" ${d.every === n ? 'selected' : ''}>${EVERY_LABEL[n]}</option>`).join('')}</select></div>
+          <div><label class="f-label" for="rstart">Primo mese</label>
+          <select class="f-input" id="rstart">${Array.from({ length: 12 }, (_, i) => shiftMonth(monthKey(todayISO()), i)).map(mk => `<option value="${mk}" ${d.start === mk ? 'selected' : ''}>${monthLabel(mk)}</option>`).join('')}</select></div>
+        </div>
+        <p class="r-note" style="margin-top:10px">Affitto un mese a testa? Crea due ricorrenti «ogni 2 mesi» sfalsate di un mese: una la paghi tu, l'altra l'altra persona.</p>
         <span class="f-label">Categoria</span>
         <div class="catgrid">${cats().map(c => `<button class="catbtn" data-act="rec-cat" data-id="${esc(c.id)}" aria-pressed="${c.id === d.catId}">${icon(c.icon, 20)}<span>${esc(c.name)}</span></button>`).join('')}</div>
         <span class="f-label">Paga</span>
@@ -782,6 +798,7 @@ function render() {
   if (S.flag && S.data && !S.sheet) { // apertura diretta di un foglio via URL (demo/QA)
     if (S.flag === 'pad') S.sheet = { type: 'pad', draft: freshDraft() };
     if (S.flag === 'detail') S.sheet = { type: 'detail', draft: { ...freshDraft(), amount: 2350 } };
+    if (S.flag === 'rec') S.sheet = { type: 'rec', draft: { desc: '', amtStr: '', day: 1, every: 1, start: monthKey(todayISO()), catId: 'casa', paidBy: myId() || members()[0]?.id, selected: members().map(m => m.id) } };
     S.flag = null;
   }
   // il focus sopravvive al re-render (tastierino usabile da tastiera)
@@ -790,6 +807,7 @@ function render() {
     ? `[data-act="${ae.dataset.act}"]${ae.dataset.d ? `[data-d="${ae.dataset.d}"]` : ''}${ae.dataset.id ? `[data-id="${ae.dataset.id}"]` : ''}${ae.dataset.m ? `[data-m="${ae.dataset.m}"]` : ''}`
     : null;
   const hadSheet = !!document.querySelector('.sheet');
+  S.sheetWasOpen = hadSheet; // il foglio anima solo alla vera apertura, non a ogni ridisegno
   let html;
   if (a === 'new') html = newGroupView();
   else if (a === 'join' && b) html = joinView();
@@ -981,7 +999,7 @@ const ACTS = {
   },
 
   'open-rec': () => {
-    S.sheet = { type: 'rec', draft: { desc: '', amtStr: '', day: 1, catId: 'casa', paidBy: myId() || members()[0]?.id, selected: members().map(m => m.id) } };
+    S.sheet = { type: 'rec', draft: { desc: '', amtStr: '', day: 1, every: 1, start: monthKey(todayISO()), catId: 'casa', paidBy: myId() || members()[0]?.id, selected: members().map(m => m.id) } };
     render();
   },
   'rec-cat': el => { S.sheet.draft.catId = el.dataset.id; syncRecInputs(); render(); },
@@ -1002,7 +1020,7 @@ const ACTS = {
       const shares = computeShares(amount, d.selected, 'equal');
       const rec = {
         id: db.uid(), desc: d.desc.trim(), amount, paidBy: d.paidBy, shares,
-        catId: d.catId, dayOfMonth: d.day, startMonth: S.month >= monthKey(todayISO()) ? monthKey(todayISO()) : S.month,
+        catId: d.catId, dayOfMonth: d.day, everyMonths: d.every, startMonth: d.start,
       };
       S.sheet = null;
       await db.updateMeta(S.gid, { recurring: [...(meta().recurring || []), rec] });
@@ -1107,6 +1125,8 @@ function syncRecInputs() {
   d.desc = document.getElementById('rdesc')?.value ?? d.desc;
   d.amtStr = document.getElementById('ramt')?.value ?? d.amtStr;
   d.day = Number(document.getElementById('rday')?.value ?? d.day);
+  d.every = Number(document.getElementById('revery')?.value ?? d.every);
+  d.start = document.getElementById('rstart')?.value ?? d.start;
 }
 
 document.addEventListener('click', e => {

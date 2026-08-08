@@ -31,7 +31,8 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     caches.open(CACHE).then(async c => {
       const cached = await c.match(key);
-      const fresh = fetch(req).then(res => {
+      // no-store: la revalidation salta la cache HTTP del browser, così un deploy arriva al 2° avvio
+      const fresh = fetch(req, { cache: 'no-store' }).then(res => {
         if (res.ok) c.put(key, res.clone());
         return res;
       }).catch(() => cached);

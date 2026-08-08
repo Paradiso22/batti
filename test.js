@@ -52,6 +52,21 @@ assert.equal(due.length, 3);
 due = dueRecurring({ ...rec, dayOfMonth: 1 }, '2026-03-15');
 assert.deepEqual(due.map(d => d.date), ['2026-01-01', '2026-02-01', '2026-03-01']);
 
+// cadenze più lunghe: ogni 2 mesi da gennaio → gen, mar, mag (l'affitto alternato)
+due = dueRecurring({ ...rec, dayOfMonth: 1, everyMonths: 2 }, '2026-05-15');
+assert.deepEqual(due.map(d => d.date), ['2026-01-01', '2026-03-01', '2026-05-01']);
+// la gemella sfalsata: ogni 2 mesi da febbraio → feb, apr
+due = dueRecurring({ ...rec, dayOfMonth: 1, everyMonths: 2, startMonth: '2026-02' }, '2026-05-15');
+assert.deepEqual(due.map(d => d.date), ['2026-02-01', '2026-04-01']);
+// trimestrale a cavallo d'anno
+due = dueRecurring({ ...rec, dayOfMonth: 10, everyMonths: 3, startMonth: '2026-11' }, '2027-02-15');
+assert.deepEqual(due.map(d => d.date), ['2026-11-10', '2027-02-10']);
+// annuale
+due = dueRecurring({ ...rec, dayOfMonth: 15, everyMonths: 12 }, '2027-03-01');
+assert.deepEqual(due.map(d => d.date), ['2026-01-15', '2027-01-15']);
+// partenza nel futuro: ancora niente
+assert.equal(dueRecurring({ ...rec, everyMonths: 2, startMonth: '2026-09' }, '2026-08-09').length, 0);
+
 // parsing importi
 assert.equal(parseAmount('12,50'), 1250);
 assert.equal(parseAmount('12.50'), 1250);

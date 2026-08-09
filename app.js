@@ -179,12 +179,15 @@ function ensureGroup(gid) {
     // categorie aggiunte all'app dopo la creazione del gruppo: le accodo una volta,
     // senza toccare quelle esistenti
     if (!catsAggiornate) {
-      const presenti = new Set((data.meta.categories || []).map(c => c.id));
-      const nuove = DEFAULT_CATS.filter(c => !presenti.has(c.id));
-      if (nuove.length) {
+      const attuali = data.meta.categories || [];
+      const presenti = new Set(attuali.map(c => c.id));
+      const ordine = DEFAULT_CATS.map(c => c.id); // le nuove entrano al loro posto, non in coda
+      const pos = c => { const i = ordine.indexOf(c.id); return i < 0 ? 999 : i; };
+      const categories = [...attuali, ...DEFAULT_CATS.filter(c => !presenti.has(c.id))]
+        .sort((a, b) => pos(a) - pos(b));
+      if (categories.map(c => c.id).join() !== attuali.map(c => c.id).join()) {
         catsAggiornate = true;
-        db.updateMeta(gid, { categories: [...(data.meta.categories || []), ...nuove] })
-          .catch(e => toast(e.message));
+        db.updateMeta(gid, { categories }).catch(e => toast(e.message));
       }
     }
     // ricorrenti scadute: id deterministici, quindi idempotente anche tra più telefoni
@@ -319,10 +322,10 @@ function homeView() {
         ${icon('chevR', 18)}
       </button>`).join('')}
       <hr class="r-rule">
-      <p class="r-note r-center">Per entrare in un gruppo apri il link<br>di invito che ti è stato condiviso.</p>` : `
+      <p class="r-note r-center">Per entrare in un gruppo apri il link di invito che ti è stato condiviso.</p>` : `
       <div class="empty"><div class="big">Nessun gruppo qui</div>
-      <p>Apri sul telefono il link di invito che ti<br>è stato condiviso per entrare nel gruppo.</p></div>`}
-    ${!db.hasCloud ? `<hr class="r-rule"><p class="r-note r-center">Per ora solo gruppi locali: il cloud condiviso<br>si attiva collegando Firebase (vedi README).</p>` : ''}
+      <p>Apri sul telefono il link di invito che ti è stato condiviso per entrare nel gruppo.</p></div>`}
+    ${!db.hasCloud ? `<hr class="r-rule"><p class="r-note r-center">Per ora solo gruppi locali: il cloud condiviso si attiva collegando Firebase (vedi README).</p>` : ''}
   </div><div class="perf"></div></div>`;
   return `<div class="terminal"><div class="screen">
     ${lcd({ line1: 'Batti', line1b: new Date().toLocaleDateString('it-IT'), caption: 'BENVENUTO', sub: `<span class="led ${S.online ? 'on' : 'amber'}"></span> ${db.hasCloud ? (S.online ? 'PRONTO' : 'OFFLINE') : 'SOLO GRUPPI LOCALI'}` })}
@@ -429,7 +432,7 @@ function receiptView() {
     </div>
     <hr class="r-rule">
     ${exps.length ? rows : `<div class="empty"><div class="big">Scontrino vuoto</div>
-      <p>Batti la prima spesa<br>col tasto verde qui sotto.</p></div>`}
+      <p>Batti la prima spesa col tasto verde qui sotto.</p></div>`}
     ${exps.length > 80 ? `<p class="r-note r-center" style="margin-top:10px">Mostro le ultime 80 · le altre restano nei totali</p>` : ''}
     <hr class="r-rule solid">
     <div class="r-total"><span>Totale ${monthLabel(S.month).toLowerCase()}</span><span class="amt">${fmt(total)}<small> €</small></span></div>
@@ -503,7 +506,7 @@ function busteView() {
         <div class="rail"><div class="fill ${over ? 'over' : 'ok'}" style="width:${Math.min(100, Math.round(s / b * 100))}%"></div></div>
         <div class="rwho" style="margin-top:4px">${fmt(s)} su ${fmt(b)} €</div>
       </div>`;
-    }).join('') : `<div class="empty"><div class="big">Nessuna busta</div><p>Assegna un budget a una categoria: vale da<br>questo mese in poi, senza rifarlo ogni volta.</p></div>`}
+    }).join('') : `<div class="empty"><div class="big">Nessuna busta</div><p>Assegna un budget a una categoria: vale da questo mese in poi, senza rifarlo ogni volta.</p></div>`}
     ${withB.length ? `<hr class="r-rule solid"><div class="r-total"><span>Totale buste</span><span class="amt ${totS > totB ? 'neg' : ''}">${fmt(totS)} / ${fmt(totB)}<small> €</small></span></div>` : ''}
   </div><div class="perf"></div></div>
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">

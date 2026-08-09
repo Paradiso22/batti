@@ -704,8 +704,13 @@ function sheetHtml() {
   if (sh.type === 'detail') {
     const d = sh.draft;
     const ms = members();
+    // scorciatoie: tutta la spesa su una persona sola (es. te la offro io ma paga lei)
+    const presets = ms.length <= 3 ? `<div class="key-row" style="margin-top:0;margin-bottom:10px">
+        <button type="button" class="key key--sm" data-act="split-tutti">Tutti</button>
+        ${ms.map(m => `<button type="button" class="key key--sm" data-act="split-solo" data-id="${esc(m.id)}">Solo ${esc(m.name)}</button>`).join('')}
+      </div>` : '';
     const splitBody = d.splitMode === 'equal'
-      ? `<div class="chips">${ms.map(m => `<button class="chip" style="--mcol:${mcolorOf(m)}" data-act="tgl-sel" data-id="${esc(m.id)}" aria-pressed="${d.selected.includes(m.id)}"><span class="cdot"></span>${esc(m.name)}</button>`).join('')}</div>`
+      ? presets + `<div class="chips">${ms.map(m => `<button class="chip" style="--mcol:${mcolorOf(m)}" data-act="tgl-sel" data-id="${esc(m.id)}" aria-pressed="${d.selected.includes(m.id)}"><span class="cdot"></span>${esc(m.name)}</button>`).join('')}</div>`
       : `<div class="splitlist">${ms.map(m => `<div class="srow">
           <span style="font-size:13px">${esc(m.name)}</span>
           <input class="f-input" data-split-input="${esc(m.id)}" inputmode="decimal" placeholder="0${d.splitMode === 'percent' ? ' %' : ',00'}" value="${d.values[m.id] ?? ''}">
@@ -718,15 +723,16 @@ function sheetHtml() {
         <input class="f-input" id="ddesc" maxlength="60" placeholder="${esc(cat(d.catId).name)}" value="${esc(d.desc)}">
         <span class="f-label">Categoria</span>
         <div class="catgrid">${cats().map(c => `<button class="catbtn" data-act="pick-cat" data-id="${esc(c.id)}" aria-pressed="${c.id === d.catId}">${icon(c.icon, 20)}<span>${esc(c.name)}</span></button>`).join('')}</div>
-        <span class="f-label">Ha pagato</span>
+        <span class="f-label">Ha anticipato i soldi</span>
         <div class="chips">${ms.map(m => `<button class="chip" style="--mcol:${mcolorOf(m)}" data-act="pick-payer" data-id="${esc(m.id)}" aria-pressed="${d.paidBy === m.id}"><span class="cdot"></span>${esc(m.name)}</button>`).join('')}</div>
-        <span class="f-label">Divisa</span>
+        <span class="f-label">A carico di - chi deve sostenere la spesa</span>
         <div class="seg">
           <button data-act="split-mode" data-m="equal" aria-pressed="${d.splitMode === 'equal'}">Uguale</button>
           <button data-act="split-mode" data-m="exact" aria-pressed="${d.splitMode === 'exact'}">Importi</button>
           <button data-act="split-mode" data-m="percent" aria-pressed="${d.splitMode === 'percent'}">%</button>
         </div>
         <div style="margin-top:10px">${splitBody}</div>
+        <div class="esito" id="esito">${esitoHtml(d)}</div>
         <label class="f-label" for="ddate">Data</label>
         <input class="f-input" id="ddate" type="date" value="${esc(d.date)}">
       </div><div class="perf"></div></div>
@@ -795,6 +801,26 @@ function sheetHtml() {
       </form>`);
   }
   return '';
+}
+
+// Le quote che verrebbero salvate adesso, o null se i numeri non tornano ancora.
+function anteprimaShares(d) {
+  try {
+    const selected = d.splitMode === 'equal' ? d.selected : memberIdsWithValues(d);
+    const values = {};
+    if (d.splitMode === 'exact') for (const id of selected) values[id] = parseAmount(d.values[id]) || 0;
+    if (d.splitMode === 'percent') for (const id of selected) values[id] = parseFloat(String(d.values[id]).replace(',', '.')) || 0;
+    return computeShares(d.amount, selected, d.splitMode, values);
+  } catch { return null; }
+}
+
+// Dice in chiaro chi resta in debito con chi: cosi' l'errore si vede prima di salvare.
+function esitoHtml(d) {
+  const sh = anteprimaShares(d);
+  if (!sh) return '';
+  const debiti = Object.entries(sh).filter(([id, v]) => id !== d.paidBy && v > 0);
+  if (!debiti.length) return `<b>Nessun debito:</b> la spesa resta tutta a ${esc(mname(d.paidBy))}.`;
+  return debiti.map(([id, v]) => `<b>${esc(mname(id))}</b> deve <b>${fmt(v)} €</b> a ${esc(mname(d.paidBy))}`).join('<br>');
 }
 
 function splitCheckHtml(d) {
@@ -924,6 +950,8 @@ const ACTS = {
     d.selected = d.selected.includes(id) ? d.selected.filter(x => x !== id) : [...d.selected, id];
     render();
   },
+  'split-tutti': () => { S.sheet.draft.selected = members().map(m => m.id); render(); },
+  'split-solo': el => { S.sheet.draft.selected = [el.dataset.id]; render(); },
   'save-exp': async () => {
     try { await saveExpenseFromDraft(); } catch (e) { toast(e.message); }
   },
@@ -1191,6 +1219,8 @@ document.addEventListener('input', e => {
     d.values[sid] = e.target.value;
     const check = document.querySelector('.split-check');
     if (check) check.innerHTML = splitCheckHtml(d);
+    const esito = document.getElementById('esito');
+    if (esito) esito.innerHTML = esitoHtml(d);
   }
   if (S.sheet?.type === 'rec') syncRecInputs();
 });

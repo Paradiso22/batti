@@ -22,25 +22,13 @@ self.addEventListener('activate', e => {
   );
 });
 /* ---------- promemoria a telefono fermo (dove il browser lo permette) ---------- */
-const MESSAGGI = [
-  'Tre giorni senza spese. O avete vissuto d\'amore, o qualcuno ha perso lo scontrino.',
-  'Il salvadanaio chiede notizie: sono giorni che non battete niente.',
-  'Neanche un caffè in tre giorni? Il POS non ci crede.',
-  'Allerta "poi me lo ricordo": non te lo ricorderai. Batti la spesa.',
-  'Lo scontrino si annoia. Dategli qualcosa da stampare.',
-  'Chi ha pagato l\'ultima volta? Se dovete pensarci, è ora di registrare.',
-  'I conti in sospeso sono come i piatti nel lavandino: prima li fate, meglio è.',
-  'Le coppie che dividono le spese litigano meno. Fonte: questa app.',
-  'Tre giorni di silenzio contabile. Tutto bene lì fuori?',
-  'Il terminale è acceso e vi aspetta. Non lasciatelo lì da solo.',
-];
-
 async function controllaPromemoria() {
   const c = await caches.open(STATO);
   const r = await c.match('./stato-promemoria');
   if (!r) return;
-  const { ultimaSpesa, attivi, soglia = 3 } = await r.json();
-  if (!attivi || !ultimaSpesa) return;
+  // i messaggi arrivano dalla pagina: restano scritti in un posto solo (app.js)
+  const { ultimaSpesa, attivi, soglia = 3, messaggi = [] } = await r.json();
+  if (!attivi || !ultimaSpesa || !messaggi.length) return;
   if (Math.floor((Date.now() - ultimaSpesa) / 86400000) < soglia) return;
 
   const oggi = new Date().toISOString().slice(0, 10); // al massimo un avviso al giorno
@@ -49,7 +37,7 @@ async function controllaPromemoria() {
   await c.put('./ultimo-avviso', new Response(oggi));
 
   await self.registration.showNotification('Batti', {
-    body: MESSAGGI[Math.floor(Math.random() * MESSAGGI.length)],
+    body: messaggi[Math.floor(Math.random() * messaggi.length)],
     icon: './icons/icon-192.png', badge: './icons/icon-192.png',
     tag: 'promemoria-spese', lang: 'it',
   });

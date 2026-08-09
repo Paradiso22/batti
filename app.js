@@ -49,18 +49,45 @@ const DEFAULT_CATS = [
   { id: 'altro', name: 'Altro', icon: 'box' },
 ];
 const MCOLORS = ['#2f6bd8', '#c76a10', '#0e9488', '#8a4fc9', '#8a7a1f', '#c94f7c'];
-// Promemoria: si alternano, cosi' non diventano subito rumore di fondo.
+// Promemoria: si alternano, così non diventano subito rumore di fondo.
+// Li legge anche il service worker (glieli passo nella cache di stato).
 const PROMEMORIA = [
-  'Tre giorni senza spese. O avete vissuto d\'amore, o qualcuno ha perso lo scontrino.',
-  'Il salvadanaio chiede notizie: sono giorni che non battete niente.',
-  'Neanche un caffè in tre giorni? Il POS non ci crede.',
-  'Allerta "poi me lo ricordo": non te lo ricorderai. Batti la spesa.',
-  'Lo scontrino si annoia. Dategli qualcosa da stampare.',
-  'Chi ha pagato l\'ultima volta? Se dovete pensarci, è ora di registrare.',
-  'I conti in sospeso sono come i piatti nel lavandino: prima li fate, meglio è.',
-  'Le coppie che dividono le spese litigano meno. Fonte: questa app.',
-  'Tre giorni di silenzio contabile. Tutto bene lì fuori?',
-  'Il terminale è acceso e vi aspetta. Non lasciatelo lì da solo.',
+  // generiche
+  `Tre giorni senza spese. O avete vissuto d'amore, o qualcuno ha perso lo scontrino.`,
+  `Il salvadanaio chiede notizie: sono giorni che non battete niente.`,
+  `Allerta "poi me lo ricordo": non te lo ricorderai. Batti la spesa.`,
+  `Lo scontrino si annoia. Dategli qualcosa da stampare.`,
+  `Chi ha pagato l'ultima volta? Se dovete pensarci, è ora di registrare.`,
+  `I conti in sospeso sono come i piatti nel lavandino: prima li fate, meglio è.`,
+  `Le coppie che dividono le spese litigano meno. Fonte: questa app.`,
+  `Tre giorni di silenzio contabile. Tutto bene lì fuori?`,
+  `Il terminale è acceso e vi aspetta. Non lasciatelo lì da solo.`,
+  `Nessuna spesa da tre giorni: avete scoperto il baratto?`,
+  `Se non la scrivete adesso, domani diventa "boh, mi pare venti euro".`,
+  `Tre giorni di spese fantasma. Facciamole diventare reali.`,
+  `La memoria è bravissima a dimenticare i soldi. Lo scontrino no.`,
+  `Controllo di coppia: c'è qualcosa che manca sullo scontrino?`,
+  `Il vostro POS domestico ha voglia di lavorare. Accontentatelo.`,
+  `Tre giorni fermi. I conti non si fanno da soli, e lo sapete.`,
+  `Piccolo sforzo adesso, zero discussioni a fine mese.`,
+  // sushi
+  `Tre giorni senza spese e nemmeno un sushi? Difficile da credere.`,
+  `L'ultimo sushi non si è registrato da solo. Tocca a voi.`,
+  `Se è passato un all you can eat e non l'ho saputo, ci resto male.`,
+  `Sushi, sashimi e uno scontrino non battuto: manca qualcosa.`,
+  `Il conto del giapponese è sparito nel nulla? Recuperiamolo.`,
+  // cibo d'asporto
+  `Il rider è passato, lo scontrino no. Sistemiamo?`,
+  `Le serate divano e asporto sono spese a tutti gli effetti. Registratele.`,
+  `Asporto senza registrazione: il crimine perfetto. Ma vi ho visti.`,
+  `Tre giorni senza spese e il telefono pieno di app di consegna. Sospetto.`,
+  `L'asporto di ieri sera vale quanto la spesa al supermercato. Battetelo.`,
+  // serate caraibiche
+  `Prima di ballare, battete le spese. Poi pista libera.`,
+  `Salsa, bachata e ingressi non registrati: sistemiamo il passo falso.`,
+  `Avete ballato tutta la sera, ma i conti sono rimasti fermi.`,
+  `Tre giorni senza spese: eravate in pista invece che sull'app?`,
+  `Dopo la serata caraibica restano i ricordi e lo scontrino. Il secondo si registra qui.`,
 ];
 const DOW = ['DOM', 'LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB'];
 const EVERY_LABEL = { 1: 'ogni mese', 2: 'ogni 2 mesi', 3: 'ogni 3 mesi', 6: 'ogni 6 mesi', 12: 'ogni anno' };
@@ -150,6 +177,7 @@ async function salvaStatoPromemoria(exps) {
       ultimaSpesa: exps.reduce((max, e) => Math.max(max, e.createdAt || 0), 0),
       attivi: promemoriaAttivi(),
       soglia: GIORNI_SILENZIO,
+      messaggi: PROMEMORIA,
     })));
   } catch { /* la cache puo' essere piena o negata: il promemoria non e' critico */ }
 }

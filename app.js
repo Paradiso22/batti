@@ -68,6 +68,12 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 // gli id di gruppo veri sono UUID o 'local-<uuid>': tutto ciò che esce da questo
 // set di caratteri non è un id nostro ed è respinto (blocca XSS via hash dell'URL).
 const safeId = s => typeof s === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(s);
+// Il gruppo aperto vive in memoria del dispositivo, non nell'indirizzo: cosi'
+// l'id (che e' il segreto del gruppo) non finisce nella barra, nella cronologia
+// o negli screenshot. Nell'URL compare solo nel link di invito.
+const CURRENT = 'batti:current';
+const setCurrent = id => localStorage.setItem(CURRENT, id);
+const getCurrent = () => localStorage.getItem(CURRENT);
 const fmt = fmtCents;
 const lcdFmt = cents => (cents / 100).toFixed(2);
 const nav = h => { location.hash = h; };
@@ -191,16 +197,30 @@ addEventListener('offline', () => { S.online = false; render(); });
 function route() {
   S.route = parseRoute();
   const [a, b] = S.route;
-  if (a === 'g' && !S.route[2]) S.month = monthKey(todayISO()); // lo scontrino torna sempre al mese corrente
-  if (a === 'demo') {
+  const coda = rest => `${rest ? '/' + rest : ''}${S.flag ? '!' + S.flag : ''}`;
+
+  if (a === 'demo') { // demo: apre il gruppo d'esempio senza id nell'indirizzo
     seedDemo();
-    const rest = S.route.slice(1).join('/');
-    location.replace(`#/g/local-demo${rest ? '/' + rest : ''}${S.flag ? '!' + S.flag : ''}`);
+    setCurrent('local-demo');
+    location.replace(`#/gruppo${coda(S.route.slice(1).join('/'))}`);
     return;
   }
-  if ((a === 'g' || a === 'join') && b && !safeId(b)) { location.replace('#/'); return; }
-  if (a === 'g' && b) ensureGroup(b);
-  else if (a === 'join' && b) loadJoin(b);
+  // vecchi link con l'id in chiaro (#/g/<id>): li accettiamo solo se il gruppo e'
+  // gia' noto a questo dispositivo, cosi' un link altrui non puo' sostituirlo.
+  if (a === 'g' && b) {
+    if (!safeId(b) || !db.myGroups().some(g => g.id === b)) { location.replace('#/'); return; }
+    setCurrent(b);
+    location.replace(`#/gruppo${coda(S.route.slice(2).join('/'))}`);
+    return;
+  }
+  if (a === 'join' && b && !safeId(b)) { location.replace('#/'); return; }
+
+  if (a === 'gruppo' && !b) S.month = monthKey(todayISO()); // lo scontrino torna al mese corrente
+  if (a === 'gruppo') {
+    const id = getCurrent();
+    if (!safeId(id || '')) { location.replace('#/'); return; }
+    ensureGroup(id);
+  } else if (a === 'join' && b) loadJoin(b);
   else { S.unsub?.(); S.unsub = null; S.gid = null; S.data = null; }
   render();
 }
@@ -243,13 +263,12 @@ function syncSub() {
 }
 
 function navBar(tab) {
-  const gid = S.gid;
   const items = [
-    ['scontrino', 'receipt', 'Spese', `#/g/${gid}`],
-    ['saldi', 'swap', 'Saldi', `#/g/${gid}/saldi`],
-    ['buste', 'wallet', 'Buste', `#/g/${gid}/buste`],
-    ['stats', 'chart', 'Stats', `#/g/${gid}/stats`],
-    ['altro', 'gear', 'Altro', `#/g/${gid}/altro`],
+    ['scontrino', 'receipt', 'Spese', '#/gruppo'],
+    ['saldi', 'swap', 'Saldi', '#/gruppo/saldi'],
+    ['buste', 'wallet', 'Buste', '#/gruppo/buste'],
+    ['stats', 'chart', 'Stats', '#/gruppo/stats'],
+    ['altro', 'gear', 'Altro', '#/gruppo/altro'],
   ];
   return `<nav class="nav" aria-label="Sezioni del gruppo">${items.map(([id, ic, label, href]) =>
     `<a class="nav-key" href="${esc(href)}" ${tab === id ? 'aria-current="page"' : ''}>${icon(ic, 19)}<span>${label}</span><span class="dot"></span></a>`
@@ -280,11 +299,11 @@ function homeView() {
     <hr class="r-rule">
     ${groups.length ? `
       <span class="f-label">I tuoi gruppi</span>
-      ${groups.map(g => `<a class="grouprow" href="#/g/${esc(g.id)}">
+      ${groups.map(g => `<button class="grouprow" data-act="open-group" data-id="${esc(g.id)}">
         <span><span class="gname">${esc(g.name)}</span>
         <div class="gsub">${g.cloud ? 'CLOUD · SINCRONIZZATO' : 'LOCALE · QUESTO DISPOSITIVO'}</div></span>
         ${icon('chevR', 18)}
-      </a>`).join('')}
+      </button>`).join('')}
       <hr class="r-rule">
       <p class="r-note r-center">Per entrare in un gruppo apri il link<br>di invito che ti è stato condiviso.</p>` : `
       <div class="empty"><div class="big">Nessun gruppo qui</div>
@@ -781,7 +800,7 @@ const memberIdsWithValues = d => members().map(m => m.id).filter(id => {
 
 /* ---------- render ---------- */
 function render() {
-  const [a, b, c] = S.route;
+  const [a, b] = S.route;
   if (S.flag && S.data && !S.sheet) { // apertura diretta di un foglio via URL (demo/QA)
     if (S.flag === 'pad') S.sheet = { type: 'pad', draft: freshDraft() };
     if (S.flag === 'detail') S.sheet = { type: 'detail', draft: { ...freshDraft(), amount: 2350 } };
@@ -798,10 +817,10 @@ function render() {
   let html;
   if (a === 'new') html = newGroupView();
   else if (a === 'join' && b) html = joinView();
-  else if (a === 'g' && b) {
-    if (!S.data) html = loadingGroupView(c || 'scontrino');
+  else if (a === 'gruppo') {
+    if (!S.data) html = loadingGroupView(b || 'scontrino');
     else if (!myId() && members().length) html = whoAmIView();
-    else html = { undefined: receiptView, saldi: saldiView, buste: busteView, stats: statsView, altro: altroView }[c]?.() || receiptView();
+    else html = { undefined: receiptView, saldi: saldiView, buste: busteView, stats: statsView, altro: altroView }[b]?.() || receiptView();
   } else html = homeView();
   $app.innerHTML = html;
   const sheetEl = document.querySelector('.sheet-panel');
@@ -851,6 +870,7 @@ async function saveExpenseFromDraft() {
 const ACTS = {
   'go-home': () => nav('#/'),
   'go-new': () => nav('#/new'),
+  'open-group': el => { setCurrent(el.dataset.id); nav('#/gruppo'); },
   'close-sheet': () => { S.sheet = null; render(); },
 
   'ng-cloud': el => {
@@ -860,7 +880,8 @@ const ACTS = {
   'pick-me': async el => {
     db.setMe(joinState.id, el.dataset.id);
     db.rememberGroup({ id: joinState.id, name: joinState.meta.name, cloud: !joinState.id.startsWith('local-') });
-    nav(`#/g/${joinState.id}`);
+    setCurrent(joinState.id);
+    nav('#/gruppo');
   },
   'pick-me-inline': el => { db.setMe(S.gid, el.dataset.id); render(); },
 
@@ -1033,7 +1054,8 @@ const ACTS = {
         const me = db.getMe(oldGid);
         if (me) db.setMe(newId, me);
         toast('Fatto: ora sei sul gruppo cloud');
-        nav(`#/g/${newId}`);
+        setCurrent(newId);
+        nav('#/gruppo');
       },
     };
     render();
@@ -1043,7 +1065,7 @@ const ACTS = {
       type: 'confirm', title: 'Uscire da questo gruppo?',
       body: S.gid.startsWith('local-') ? 'Il gruppo è locale: uscendo, i suoi dati su questo telefono si perdono.' : 'Sparisce da questo telefono. Rientri quando vuoi col link di invito.',
       yes: 'Esci', danger: true,
-      onYes: () => { db.forgetGroup(S.gid); nav('#/'); },
+      onYes: () => { db.forgetGroup(S.gid); localStorage.removeItem(CURRENT); nav('#/'); },
     };
     render();
   },
@@ -1063,7 +1085,8 @@ const SUBMITS = {
       const id = await db.createGroup({ name, members: ms, categories: DEFAULT_CATS, cloud, ownerKey });
       if (cloud && ownerKey) localStorage.setItem('batti:ownerkey', ownerKey);
       db.setMe(id, ms[0].id);
-      nav(`#/g/${id}`);
+      setCurrent(id);
+      nav('#/gruppo');
     } catch (e) {
       toast(String(e.code || e.message).includes('permission')
         ? 'Codice proprietario sbagliato: la creazione dei gruppi è riservata.'
@@ -1079,7 +1102,8 @@ const SUBMITS = {
       await db.updateMeta(j.id, { members: [...j.meta.members, me] });
       db.setMe(j.id, me.id);
       db.rememberGroup({ id: j.id, name: j.meta.name, cloud: !j.id.startsWith('local-') });
-      nav(`#/g/${j.id}`);
+      setCurrent(j.id);
+      nav('#/gruppo');
     } catch (e) { toast(e.message); }
   },
   'add-member': async () => {

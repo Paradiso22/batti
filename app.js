@@ -743,6 +743,30 @@ function sheetHtml() {
       </div>`);
   }
 
+  if (sh.type === 'settle') {
+    const d = sh.draft;
+    return wrap(`
+      <div class="sheet-title">Segna pagato</div>
+      <div class="perf-wrap"><div class="perf top"></div><div class="paper">
+        <div class="r-head">
+          <div class="r-title">${fmt(d.amount)} €</div>
+          <div class="r-meta">${esc(mname(sh.from))} → ${esc(mname(sh.to))}</div>
+        </div>
+        <hr class="r-rule">
+        <label class="f-label" for="sdesc">Descrizione</label>
+        <input class="f-input" id="sdesc" maxlength="60" placeholder="Rimborso" value="${esc(d.desc)}">
+        <span class="f-label">Categoria</span>
+        <div class="catgrid">${cats().map(c => `<button class="catbtn" data-act="settle-cat" data-id="${esc(c.id)}" aria-pressed="${c.id === d.catId}">${icon(c.icon, 20)}<span>${esc(c.name)}</span></button>`).join('')}</div>
+        <label class="f-label" for="sdate">Data</label>
+        <input class="f-input" id="sdate" type="date" value="${esc(d.date)}">
+        <div class="esito">Dopo il salvataggio <b>${esc(mname(sh.from))}</b> e <b>${esc(mname(sh.to))}</b> tornano in pari, e il rimborso resta sullo scontrino.</div>
+      </div><div class="perf"></div></div>
+      <div class="key-row">
+        <button class="key key--red" data-act="close-sheet">${icon('x', 16)} Annulla</button>
+        <button class="key key--green" data-act="settle-save">${icon('check', 16)} Segna pagato</button>
+      </div>`);
+  }
+
   if (sh.type === 'confirm') {
     return wrap(`
       <div class="sheet-title">${esc(sh.title)}</div>
@@ -988,15 +1012,26 @@ const ACTS = {
   },
 
   'settle': el => {
-    const { from, to } = el.dataset; const amount = Number(el.dataset.amt);
+    const { from, to } = el.dataset;
+    // chi paga chi e quanto sono gia' decisi dal piano: restano solo i dettagli
     S.sheet = {
-      type: 'confirm', title: `${mname(from)} paga ${fmt(amount)} € a ${mname(to)}`,
-      body: 'Registro il rimborso sullo scontrino e i saldi si pareggiano.', yes: 'Segna pagato',
-      onYes: () => db.saveExpense(S.gid, {
-        id: db.uid(), desc: 'Rimborso', amount, paidBy: from, shares: { [to]: amount },
-        catId: 'altro', date: todayISO(), isTransfer: true, createdAt: Date.now(),
-      }),
+      type: 'settle', from, to,
+      draft: { amount: Number(el.dataset.amt), desc: 'Rimborso', catId: 'altro', date: todayISO() },
     };
+    render();
+  },
+  'settle-cat': el => { S.sheet.draft.catId = el.dataset.id; render(); },
+  'settle-save': async () => {
+    const { from, to, draft } = S.sheet;
+    S.sheet = null;
+    try {
+      await db.saveExpense(S.gid, {
+        id: db.uid(), desc: draft.desc.trim() || 'Rimborso', amount: draft.amount,
+        paidBy: from, shares: { [to]: draft.amount }, catId: draft.catId,
+        date: draft.date, isTransfer: true, createdAt: Date.now(),
+      });
+      toast('Rimborso registrato sullo scontrino');
+    } catch (e) { toast(e.message); }
     render();
   },
 
@@ -1212,8 +1247,8 @@ document.addEventListener('keydown', e => {
 document.addEventListener('input', e => {
   const d = S.sheet?.draft;
   if (!d) return;
-  if (e.target.id === 'ddesc') d.desc = e.target.value;
-  if (e.target.id === 'ddate') d.date = e.target.value || d.date;
+  if (e.target.id === 'ddesc' || e.target.id === 'sdesc') d.desc = e.target.value;
+  if (e.target.id === 'ddate' || e.target.id === 'sdate') d.date = e.target.value || d.date;
   const sid = e.target.dataset.splitInput;
   if (sid !== undefined) {
     d.values[sid] = e.target.value;

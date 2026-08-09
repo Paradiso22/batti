@@ -156,6 +156,63 @@ function shiftMonth(mk, delta) {
   return `${y}-${String(m).padStart(2, '0')}`;
 }
 
+/* ---------- battute ---------- */
+// Commenti al volo dopo aver battuto una spesa. Escono solo quando c'e' davvero
+// qualcosa da dire (busta sforata, botta grossa, serata): niente rumore inutile.
+const B_SFORO = [
+  cat => `Busta ${cat} ufficialmente esplosa. Ma vuoi mettere la soddisfazione?`,
+  cat => `${cat}: budget finito. Da qui in poi si va a sentimento.`,
+  cat => `La busta ${cat} piange. Voi però sorridete, quindi va bene.`,
+  cat => `Sforata la busta ${cat}. Nessuno lo dirà a fine mese. Tranne me.`,
+  cat => `${cat} oltre il limite. Il salvadanaio ha chiuso un occhio.`,
+];
+const B_QUASI = [
+  cat => `Busta ${cat} quasi finita. Occhio negli ultimi giorni.`,
+  cat => `${cat}: ne resta poco. Da qui in avanti si guida piano.`,
+];
+const B_GROSSA = [
+  'Bella botta. Lo scontrino ha tremato un attimo.',
+  'Numeri seri. Il salvadanaio ha sentito il colpo.',
+  'Spesa importante registrata. Coraggio, sarà stata utile.',
+  'Questa si sente. Almeno adesso è scritta e nessuno se la dimentica.',
+];
+const B_FUORI = [
+  'Serata coi fiocchi. Il conto però resta qui.',
+  'Sushi conteggiato. Speriamo ci fosse anche il sashimi.',
+  'Bel mangiare. La bilancia non la gestiamo noi, solo i conti.',
+];
+const B_SVAGO = [
+  'Divertimento registrato. Ne è valsa la pena, vero?',
+  'Serata di ballo messa a bilancio. Ora sì che è ufficiale.',
+  'Svago segnato. La vita è breve, i conti pure.',
+];
+const B_RISPARMI = [
+  'Soldi messi da parte. Il futuro vi ringrazia.',
+  'Risparmio registrato. Che coppia responsabile.',
+];
+const pesca = a => a[Math.floor(Math.random() * a.length)];
+
+// Ritorna la battuta giusta per la spesa appena salvata, o null se non serve.
+function battutaSpesa(exp, expsPrecedenti) {
+  if (exp.isTransfer) return null;
+  const c = cat(exp.catId).name;
+  const budget = budgetAt((meta().budgets || {})[exp.catId], monthKey(exp.date));
+  if (budget > 0) {
+    const speso = m => expsPrecedenti
+      .filter(e => !e.isTransfer && e.catId === exp.catId && monthKey(e.date) === m)
+      .reduce((t, e) => t + e.amount, 0);
+    const prima = speso(monthKey(exp.date));
+    const dopo = prima + exp.amount;
+    if (prima <= budget && dopo > budget) return pesca(B_SFORO)(c);
+    if (dopo > budget * 0.85 && dopo <= budget) return pesca(B_QUASI)(c);
+  }
+  if (exp.amount >= 15000) return pesca(B_GROSSA);
+  if (exp.catId === 'risparmi') return pesca(B_RISPARMI);
+  if (exp.amount >= 4000 && exp.catId === 'fuori') return pesca(B_FUORI);
+  if (exp.amount >= 4000 && exp.catId === 'svago') return pesca(B_SVAGO);
+  return null;
+}
+
 /* ---------- promemoria ---------- */
 const GIORNI_SILENZIO = 3;      // dopo 2 giorni pieni senza spese, il terzo si fa vivo
 const PROM_ATTIVI = 'batti:promemoria';
@@ -489,7 +546,7 @@ function joinView() {
     <div class="key-row"><button class="key key--wide" data-act="go-home">Torna all'inizio</button></div>`;
   else body = `
     <div class="r-head"><div class="r-title">${esc(j.meta.name)}</div>
-    <div class="r-meta">${j.meta.members.length} partecipanti</div></div>
+    <div class="r-meta">${j.meta.members.length === 1 ? '1 partecipante' : j.meta.members.length + ' partecipanti'}</div></div>
     <hr class="r-rule">
     <span class="f-label">Chi sei?</span>
     <div class="chips">${j.meta.members.map(m =>
@@ -518,7 +575,13 @@ function myBalanceLcd(tab) {
   const me = myId();
   const bal = computeBalances(expenses(), members().map(m => m.id));
   const mine = me ? (bal[me] || 0) : 0;
-  const caption = !me ? 'CIAO' : mine > 0 ? 'TI DEVONO' : mine < 0 ? 'DEVI' : 'SEI IN PARI';
+  // in due si parla al singolare, e si dice pure chi: "Ele ti deve"
+  const altri = members().filter(m => m.id !== me);
+  const solo = altri.length === 1 ? altri[0].name : null;
+  const caption = !me ? 'Ciao'
+    : mine > 0 ? (solo ? `${solo} ti deve` : 'Ti devono')
+    : mine < 0 ? (solo ? `Devi a ${solo}` : 'Devi')
+    : (solo ? 'Siete in pari' : 'Sei in pari');
   return lcd({
     line1: meta().name, line1b: fmtDay(todayISO()),
     caption, num: me && mine !== 0 ? lcdFmt(Math.abs(mine)) : (me ? '0.00' : ''),
@@ -535,7 +598,13 @@ function receiptView() {
     const isNew = e.id === S.justPrinted;
     const who = e.isTransfer
       ? `${esc(mname(e.paidBy))} → ${esc(Object.keys(e.shares).map(mname).join(', '))}`
-      : `${esc(mname(e.paidBy))} · diviso ×${Object.keys(e.shares).length}`;
+      : (() => {
+        const ids = Object.keys(e.shares);
+        if (ids.length > 1) return `${esc(mname(e.paidBy))} · diviso ×${ids.length}`;
+        return ids[0] === e.paidBy
+          ? `${esc(mname(e.paidBy))} · spesa personale`
+          : `${esc(mname(e.paidBy))} · tutta a ${esc(mname(ids[0]))}`;
+      })();
     rows += `<button class="rrow ${e.isTransfer ? 'is-transfer' : ''} ${isNew ? 'rrow--new' : ''}" data-act="edit-exp" data-id="${esc(e.id)}">
       <span class="ric">${icon(e.isTransfer ? 'swap' : cat(e.catId).icon, 19)}</span>
       <span><span class="rdesc">${esc(e.desc || cat(e.catId).name)}</span><div class="rwho">${who}</div></span>
@@ -546,7 +615,7 @@ function receiptView() {
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
     <div class="r-head">
       <div class="r-title">${esc(meta().name)}</div>
-      <div class="r-meta">Documento gestionale · ${members().length} persone</div>
+      <div class="r-meta">Documento gestionale · ${members().length === 1 ? '1 persona' : members().length + ' persone'}</div>
     </div>
     <hr class="r-rule">
     ${exps.length ? rows : `<div class="empty"><div class="big">Scontrino vuoto</div>
@@ -579,12 +648,12 @@ function saldiView() {
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
     <div class="r-head"><div class="r-title">Piano rimborsi</div><div class="r-meta">il minimo di passaggi per pareggiare</div></div>
     <hr class="r-rule">
-    ${allEven ? `<div class="empty"><div class="big">✻ Tutti in pari ✻</div><p>Nessun rimborso necessario.</p></div>`
+    ${allEven ? `<div class="empty"><div class="big">✻ ${members().length === 2 ? 'Siete in pari' : 'Tutti in pari'} ✻</div><p>Nessun rimborso necessario. Che coppia ordinata.</p></div>`
       : plan.map(p => `<div class="setrow">
           <span class="sdesc">${esc(mname(p.from))} → ${esc(mname(p.to))}<span class="amt">${fmt(p.amount)}<small> €</small></span></span>
           <button class="key key--sm key--green" data-act="settle" data-from="${esc(p.from)}" data-to="${esc(p.to)}" data-amt="${p.amount}">Segna pagato</button>
         </div>`).join('')}
-    ${allEven ? '' : `<hr class="r-rule"><p class="r-note">«Segna pagato» registra il rimborso sullo scontrino: i saldi si aggiornano per tutti.</p>`}
+    ${allEven ? '' : `<hr class="r-rule"><p class="r-note">«Segna pagato» registra il rimborso sullo scontrino: i saldi si aggiornano ${members().length === 2 ? 'per entrambi' : 'per tutti'}.</p>`}
   </div><div class="perf"></div></div>`;
   return groupFrame('saldi', myBalanceLcd('saldi'), content);
 }
@@ -750,10 +819,6 @@ function altroView() {
         <button class="iconbtn danger" data-act="del-member" data-id="${esc(x.id)}" data-used="${usedMember.has(x.id) ? 1 : 0}" aria-label="Elimina ${esc(x.name)}">${icon('trash', 16)}</button>
       </span>
     </div>`).join('')}</div>
-    <form class="f-row" data-act-submit="add-member" style="margin-top:10px">
-      <input class="f-input" id="newmember" maxlength="20" placeholder="Nuovo membro…">
-      <button type="submit" class="key key--sm" style="flex:0 0 auto">${icon('plus', 15)} Aggiungi</button>
-    </form>
   </div><div class="perf"></div></div>
 
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
@@ -1063,11 +1128,17 @@ async function saveExpenseFromDraft() {
   if (d.splitMode === 'percent') for (const id of selected) values[id] = parseFloat(String(d.values[id]).replace(',', '.')) || 0;
   const shares = computeShares(d.amount, selected, d.splitMode === 'equal' ? 'equal' : d.splitMode, values);
   const id = d.editId || db.uid();
-  await db.saveExpense(S.gid, {
+  const spesa = {
     id, desc: d.desc.trim(), amount: d.amount, paidBy: d.paidBy, shares,
     catId: d.catId, date: d.date, isTransfer: false,
     createdAt: d.createdAt || Date.now(),
-  });
+  };
+  const prima = expenses().filter(e => e.id !== id); // per capire se questa sfora la busta
+  await db.saveExpense(S.gid, spesa);
+  if (!d.editId) {
+    const battuta = battutaSpesa(spesa, prima);
+    if (battuta) setTimeout(() => toast(battuta, 5000), 700); // dopo l'animazione di stampa
+  }
   S.justPrinted = d.editId ? null : id;
   S.sheet = null;
   render();
@@ -1142,7 +1213,7 @@ const ACTS = {
   },
   'del-exp': () => {
     const id = S.sheet.draft.editId;
-    S.sheet = { type: 'confirm', title: 'Eliminare questa spesa?', body: 'Sparisce dallo scontrino e dai saldi di tutti.', yes: 'Elimina', danger: true, onYes: () => db.deleteExpense(S.gid, id) };
+    S.sheet = { type: 'confirm', title: 'Eliminare questa spesa?', body: `Sparisce dallo scontrino e dai saldi ${members().length === 2 ? 'di entrambi' : 'di tutti'}.`, yes: 'Elimina', danger: true, onYes: () => db.deleteExpense(S.gid, id) };
     render();
   },
   'confirm-yes': async () => {
@@ -1336,15 +1407,6 @@ const SUBMITS = {
       setCurrent(j.id);
       nav('#/gruppo');
     } catch (e) { toast(e.message); }
-  },
-  'add-member': async () => {
-    const inp = document.getElementById('newmember');
-    const name = inp.value.trim();
-    if (!name) return;
-    const used = new Set(members().map(m => m.c));
-    let c = 0; while (used.has(c) && c < MCOLORS.length) c++;
-    await db.updateMeta(S.gid, { members: [...members(), { id: db.uid().slice(0, 8), name: name.slice(0, 20), c: c % MCOLORS.length }] });
-    inp.value = '';
   },
   'rename-group': async () => {
     const name = document.getElementById('gnewname').value.trim();

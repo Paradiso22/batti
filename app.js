@@ -49,6 +49,19 @@ const DEFAULT_CATS = [
   { id: 'altro', name: 'Altro', icon: 'box' },
 ];
 const MCOLORS = ['#2f6bd8', '#c76a10', '#0e9488', '#8a4fc9', '#8a7a1f', '#c94f7c'];
+// Promemoria: si alternano, cosi' non diventano subito rumore di fondo.
+const PROMEMORIA = [
+  'Tre giorni senza spese. O avete vissuto d\'amore, o qualcuno ha perso lo scontrino.',
+  'Il salvadanaio chiede notizie: sono giorni che non battete niente.',
+  'Neanche un caffè in tre giorni? Il POS non ci crede.',
+  'Allerta "poi me lo ricordo": non te lo ricorderai. Batti la spesa.',
+  'Lo scontrino si annoia. Dategli qualcosa da stampare.',
+  'Chi ha pagato l\'ultima volta? Se dovete pensarci, è ora di registrare.',
+  'I conti in sospeso sono come i piatti nel lavandino: prima li fate, meglio è.',
+  'Le coppie che dividono le spese litigano meno. Fonte: questa app.',
+  'Tre giorni di silenzio contabile. Tutto bene lì fuori?',
+  'Il terminale è acceso e vi aspetta. Non lasciatelo lì da solo.',
+];
 const DOW = ['DOM', 'LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB'];
 const EVERY_LABEL = { 1: 'ogni mese', 2: 'ogni 2 mesi', 3: 'ogni 3 mesi', 6: 'ogni 6 mesi', 12: 'ogni anno' };
 const MONTHS = ['GENNAIO', 'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO', 'LUGLIO', 'AGOSTO', 'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE'];
@@ -114,6 +127,81 @@ function shiftMonth(mk, delta) {
   let [y, m] = mk.split('-').map(Number);
   m += delta; if (m > 12) { m = 1; y++; } if (m < 1) { m = 12; y--; }
   return `${y}-${String(m).padStart(2, '0')}`;
+}
+
+/* ---------- promemoria ---------- */
+const GIORNI_SILENZIO = 3;      // dopo 2 giorni pieni senza spese, il terzo si fa vivo
+const PROM_ATTIVI = 'batti:promemoria';
+const promemoriaAttivi = () => localStorage.getItem(PROM_ATTIVI) === '1';
+const pescaMessaggio = () => PROMEMORIA[Math.floor(Math.random() * PROMEMORIA.length)];
+
+const giorniSenzaSpese = exps => {
+  const ultima = exps.reduce((max, e) => Math.max(max, e.createdAt || 0), 0);
+  if (!ultima) return 0;   // gruppo appena nato: niente rimproveri
+  return Math.floor((Date.now() - ultima) / 86400000);
+};
+
+// Il service worker non vede localStorage: gli lascio lo stato nella cache.
+async function salvaStatoPromemoria(exps) {
+  if (!('caches' in window)) return;
+  try {
+    const c = await caches.open('batti-stato');
+    await c.put('./stato-promemoria', new Response(JSON.stringify({
+      ultimaSpesa: exps.reduce((max, e) => Math.max(max, e.createdAt || 0), 0),
+      attivi: promemoriaAttivi(),
+      soglia: GIORNI_SILENZIO,
+    })));
+  } catch { /* la cache puo' essere piena o negata: il promemoria non e' critico */ }
+}
+
+async function attivaPromemoria() {
+  if (!('Notification' in window)) { toast('Questo browser non supporta le notifiche'); return; }
+  if (Notification.permission === 'denied') {
+    toast('Notifiche bloccate: riattivale dalle impostazioni del browser per questo sito');
+    return;
+  }
+  const esito = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+  if (esito !== 'granted') { toast('Permesso non concesso: niente promemoria'); return; }
+  localStorage.setItem(PROM_ATTIVI, '1');
+  const reg = await navigator.serviceWorker?.ready.catch(() => null);
+  // risveglio in background: solo dove il browser lo permette (Android installata)
+  let sfondo = false;
+  try {
+    if (reg?.periodicSync) {
+      const stato = await navigator.permissions.query({ name: 'periodic-background-sync' }).catch(() => null);
+      if (!stato || stato.state === 'granted') {
+        await reg.periodicSync.register('promemoria-spese', { minInterval: 12 * 60 * 60 * 1000 });
+        sfondo = true;
+      }
+    }
+  } catch { /* non supportato: resta il promemoria all'apertura */ }
+  reg?.showNotification('Batti', {
+    body: sfondo ? 'Promemoria attivi. Vi avviso se sparite per tre giorni.'
+                 : 'Promemoria attivi. Su questo telefono compaiono quando aprite l\'app.',
+    icon: './icons/icon-192.png', badge: './icons/icon-192.png', tag: 'batti-benvenuto',
+  });
+  await salvaStatoPromemoria(expenses());
+  render();
+}
+
+function disattivaPromemoria() {
+  localStorage.removeItem(PROM_ATTIVI);
+  navigator.serviceWorker?.ready
+    .then(r => r.periodicSync?.unregister('promemoria-spese'))
+    .catch(() => {});
+  salvaStatoPromemoria(expenses());
+  toast('Promemoria disattivati');
+  render();
+}
+
+// Se il browser non sa svegliarsi da solo, almeno all'apertura ve lo ricorda.
+function promemoriaAllApertura(exps) {
+  if (!promemoriaAttivi()) return;
+  const oggi = todayISO();
+  if (localStorage.getItem('batti:ultimo-avviso') === oggi) return;
+  if (giorniSenzaSpese(exps) < GIORNI_SILENZIO) return;
+  localStorage.setItem('batti:ultimo-avviso', oggi);
+  toast(pescaMessaggio(), 12000); // un promemoria va letto con calma
 }
 
 /* ---------- routing e dati ---------- */
@@ -203,6 +291,8 @@ function ensureGroup(gid) {
         }
       }
     }
+    salvaStatoPromemoria(data.expenses);
+    if (!S.promemoriaVisto) { S.promemoriaVisto = true; promemoriaAllApertura(data.expenses); }
     render();
   });
 }
@@ -649,6 +739,17 @@ function altroView() {
   </div><div class="perf"></div></div>
 
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
+    <span class="f-label">Promemoria</span>
+    ${promemoriaAttivi() ? `
+      <p class="r-note">Attivi: dopo ${GIORNI_SILENZIO} giorni senza spese arriva un promemoria (con messaggi che cambiano ogni volta).</p>
+      <div class="key-row"><button class="key key--wide key--yellow" data-act="prom-off">Disattiva promemoria</button></div>
+    ` : `
+      <p class="r-note">Se per ${GIORNI_SILENZIO} giorni non registrate niente, l'app ve lo ricorda. Su Android con l'app installata arriva anche a telefono fermo; su iPhone all'apertura.</p>
+      <div class="key-row"><button class="key key--wide key--green" data-act="prom-on">Attiva promemoria</button></div>
+    `}
+  </div><div class="perf"></div></div>
+
+  <div class="perf-wrap"><div class="perf top"></div><div class="paper">
     <span class="f-label">Gruppo</span>
     <form class="f-row" data-act-submit="rename-group">
       <input class="f-input" id="gnewname" maxlength="40" value="${esc(m.name)}">
@@ -948,6 +1049,8 @@ const ACTS = {
   'go-home': () => nav('#/'),
   'go-new': () => nav('#/new'),
   'open-group': el => { setCurrent(el.dataset.id); nav('#/gruppo'); },
+  'prom-on': () => attivaPromemoria(),
+  'prom-off': () => disattivaPromemoria(),
   'close-sheet': () => { S.sheet = null; render(); },
 
   'ng-cloud': el => {

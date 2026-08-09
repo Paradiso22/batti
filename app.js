@@ -882,6 +882,11 @@ function render() {
     : null;
   const hadSheet = !!document.querySelector('.sheet');
   S.sheetWasOpen = hadSheet; // il foglio anima solo alla vera apertura, non a ogni ridisegno
+  // il punto in cui stavi guardando non deve saltare in cima a ogni tocco
+  const scrollFoglio = document.querySelector('.sheet-panel')?.scrollTop || 0;
+  const scrollPagina = document.querySelector('.paper-scroll')?.scrollTop || 0;
+  const stessaSchermata = S.rottaResa === S.route.join('/');
+  S.rottaResa = S.route.join('/');
   let html;
   if (a === 'new') html = newGroupView();
   else if (a === 'join' && b) html = joinView();
@@ -892,8 +897,12 @@ function render() {
   } else html = homeView();
   $app.innerHTML = html;
   const sheetEl = document.querySelector('.sheet-panel');
-  if (sheetEl && !hadSheet) sheetEl.focus();            // foglio appena aperto
-  else if (focusSel) document.querySelector(focusSel)?.focus();
+  if (hadSheet && sheetEl && scrollFoglio) sheetEl.scrollTop = scrollFoglio;
+  const paginaEl = document.querySelector('.paper-scroll');
+  if (stessaSchermata && paginaEl && scrollPagina) paginaEl.scrollTop = scrollPagina;
+  // preventScroll: mettere a fuoco non deve trascinare la vista altrove
+  if (sheetEl && !hadSheet) sheetEl.focus({ preventScroll: true }); // foglio appena aperto
+  else if (focusSel) document.querySelector(focusSel)?.focus({ preventScroll: true });
   if (S.justPrinted) setTimeout(() => { S.justPrinted = null; }, 600);
 }
 

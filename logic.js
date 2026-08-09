@@ -105,6 +105,28 @@ export function dueRecurring(rec, today) {
   return due;
 }
 
+// Buste: una busta vale dal mese in cui la imposti in avanti, finche' non la
+// cambi. Formato: [{from:'YYYY-MM', amount}] ordinato. Un numero secco e' il
+// vecchio formato e vale per tutti i mesi.
+export function budgetAt(b, month) {
+  if (b == null) return 0;
+  if (typeof b === 'number') return b;
+  let val = 0, best = null;
+  for (const e of b) {
+    if (e.from <= month && (best === null || e.from >= best)) { best = e.from; val = e.amount; }
+  }
+  return val;
+}
+
+// Imposta l'importo da `month` in poi, senza toccare i mesi precedenti.
+export function setBudgetFrom(b, month, amount) {
+  const list = typeof b === 'number' ? [{ from: '0000-00', amount: b }] : (Array.isArray(b) ? b.map(e => ({ ...e })) : []);
+  const i = list.findIndex(e => e.from === month);
+  if (i >= 0) list[i].amount = amount;
+  else list.push({ from: month, amount });
+  return list.sort((x, y) => (x.from < y.from ? -1 : 1));
+}
+
 export function fmtCents(cents) {
   return (cents / 100).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }

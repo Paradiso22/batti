@@ -1,5 +1,5 @@
 // test.js - controlli sul motore soldi: node test.js
-import { computeShares, computeBalances, settlePlan, dueRecurring, parseAmount } from './logic.js';
+import { computeShares, computeBalances, settlePlan, dueRecurring, parseAmount, budgetAt, setBudgetFrom } from './logic.js';
 import assert from 'node:assert';
 
 const ids = ['a', 'b', 'c'];
@@ -75,5 +75,31 @@ assert.equal(parseAmount('0,1'), 10);
 assert.equal(parseAmount('1.234,56'), 123456);
 assert.equal(parseAmount('abc'), null);
 assert.equal(parseAmount('12,505'), null);
+
+// buste: valgono dal mese impostato in avanti, il passato non cambia
+let b = setBudgetFrom(undefined, '2026-08', 40000);
+assert.equal(budgetAt(b, '2026-07'), 0);        // prima: nessuna busta
+assert.equal(budgetAt(b, '2026-08'), 40000);    // il mese impostato
+assert.equal(budgetAt(b, '2026-09'), 40000);    // si trascina in avanti da sola
+assert.equal(budgetAt(b, '2027-03'), 40000);
+// la cambio a settembre: agosto resta com'era, da settembre in poi vale la nuova
+b = setBudgetFrom(b, '2026-09', 55000);
+assert.equal(budgetAt(b, '2026-08'), 40000);
+assert.equal(budgetAt(b, '2026-09'), 55000);
+assert.equal(budgetAt(b, '2026-12'), 55000);
+// azzerare da ottobre: ottobre in poi senza busta, prima invariato
+b = setBudgetFrom(b, '2026-10', 0);
+assert.equal(budgetAt(b, '2026-09'), 55000);
+assert.equal(budgetAt(b, '2026-10'), 0);
+assert.equal(budgetAt(b, '2027-01'), 0);
+// correggere un mese gia' impostato sostituisce, non duplica
+b = setBudgetFrom(b, '2026-09', 60000);
+assert.equal(b.filter(e => e.from === '2026-09').length, 1);
+assert.equal(budgetAt(b, '2026-09'), 60000);
+// vecchio formato (numero secco): vale per tutti i mesi, poi si puo' cambiare in avanti
+assert.equal(budgetAt(15000, '2020-01'), 15000);
+const conv = setBudgetFrom(15000, '2026-09', 20000);
+assert.equal(budgetAt(conv, '2026-08'), 15000);
+assert.equal(budgetAt(conv, '2026-09'), 20000);
 
 console.log('OK - tutti i controlli passano');

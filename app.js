@@ -1,5 +1,5 @@
 // app.js - interfaccia. Stato in S, render a stringhe, eventi delegati con data-act.
-import { computeShares, computeBalances, settlePlan, dueRecurring, monthKey, fmtCents, parseAmount } from './logic.js';
+import { computeShares, computeBalances, settlePlan, dueRecurring, monthKey, fmtCents, parseAmount, budgetAt, setBudgetFrom } from './logic.js';
 import * as db from './db.js';
 
 /* ---------- icone: unico set, tratto 1.75 ---------- */
@@ -13,6 +13,7 @@ const PATHS = {
   health: 'M12 20s-7-4.3-7-9.5A4 4 0 0 1 12 8a4 4 0 0 1 7 2.5C19 15.7 12 20 12 20ZM12 10v4M10 12h4',
   travel: 'M10.5 20 13 13.5 19.5 11a1.4 1.4 0 0 0-.5-2.7L4 10.5l3.5 2.5 2 6.5.9.5ZM7.5 13 5 15',
   bag: 'M5.5 8h13l-1 13h-11L5.5 8Zm3.5 0V6.5a3 3 0 0 1 6 0V8',
+  piggy: 'M20 13.3c0 3-2.9 5.2-6.5 5.2h-3C6.9 18.5 4 16.3 4 13.3s2.9-5.2 6.5-5.2h3c3.6 0 6.5 2.2 6.5 5.2ZM8.6 18.4V20.4M15.9 18.4V20.4M10.6 8.2 9.6 5.6l3 1.2M16.2 12.6h.01M11 9.9h3',
   box: 'M4 8l8-4 8 4v8l-8 4-8-4V8Zm0 0 8 4m0 0 8-4m-8 4v8',
   swap: 'M4 8h13m0 0-3.5-3.5M17 8l-3.5 3.5M20 16H7m0 0 3.5-3.5M7 16l3.5 3.5',
   plus: 'M12 5v14M5 12h14',
@@ -44,6 +45,7 @@ const DEFAULT_CATS = [
   { id: 'svago', name: 'Svago', icon: 'fun' },
   { id: 'salute', name: 'Salute', icon: 'health' },
   { id: 'viaggi', name: 'Viaggi', icon: 'travel' },
+  { id: 'risparmi', name: 'Risparmi', icon: 'piggy' },
   { id: 'altro', name: 'Altro', icon: 'box' },
 ];
 const MCOLORS = ['#2f6bd8', '#c76a10', '#0e9488', '#8a4fc9', '#8a7a1f', '#c94f7c'];
@@ -170,9 +172,21 @@ function ensureGroup(gid) {
   S.unsub?.();
   S.gid = gid; S.data = null; S.loadErr = null;
   const materialized = new Set();
+  let catsAggiornate = false;
   S.unsub = db.subscribe(gid, data => {
     S.data = data;
     db.rememberGroup({ id: gid, name: data.meta.name, cloud: !gid.startsWith('local-') });
+    // categorie aggiunte all'app dopo la creazione del gruppo: le accodo una volta,
+    // senza toccare quelle esistenti
+    if (!catsAggiornate) {
+      const presenti = new Set((data.meta.categories || []).map(c => c.id));
+      const nuove = DEFAULT_CATS.filter(c => !presenti.has(c.id));
+      if (nuove.length) {
+        catsAggiornate = true;
+        db.updateMeta(gid, { categories: [...(data.meta.categories || []), ...nuove] })
+          .catch(e => toast(e.message));
+      }
+    }
     // ricorrenti scadute: id deterministici, quindi idempotente anche tra più telefoni
     const have = new Set(data.expenses.map(e => e.id));
     for (const rec of data.meta.recurring || []) {
@@ -464,22 +478,23 @@ function monthNav() {
 
 function busteView() {
   const budgets = meta().budgets || {};
+  const bud = c => budgetAt(budgets[c.id], S.month); // la busta vale dal mese in cui l'hai messa in avanti
   const spent = {};
   for (const e of expenses()) {
     if (e.isTransfer || monthKey(e.date) !== S.month) continue;
     spent[e.catId] = (spent[e.catId] || 0) + e.amount;
   }
-  const withB = cats().filter(c => budgets[c.id] > 0);
-  const withoutB = cats().filter(c => !(budgets[c.id] > 0));
-  const totB = withB.reduce((t, c) => t + budgets[c.id], 0);
+  const withB = cats().filter(c => bud(c) > 0);
+  const withoutB = cats().filter(c => !(bud(c) > 0));
+  const totB = withB.reduce((t, c) => t + bud(c), 0);
   const totS = withB.reduce((t, c) => t + (spent[c.id] || 0), 0);
   const content = `
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
-    <div class="r-head"><div class="r-title">Buste del mese</div><div class="r-meta">budget per categoria · quanto resta</div></div>
+    <div class="r-head"><div class="r-title">Buste del mese</div><div class="r-meta">valgono da quando le imposti, mese dopo mese</div></div>
     <hr class="r-rule">
     ${monthNav()}
     ${withB.length ? withB.map(c => {
-      const b = budgets[c.id], s = spent[c.id] || 0, left = b - s, over = left < 0;
+      const b = bud(c), s = spent[c.id] || 0, left = b - s, over = left < 0;
       return `<div class="brow">
         <button class="bl" style="width:100%;text-align:left;background:none" data-act="set-budget" data-id="${esc(c.id)}" aria-label="Modifica busta ${esc(c.name)}">
           ${icon(c.icon, 18)}<span>${esc(c.name)}</span>
@@ -488,7 +503,7 @@ function busteView() {
         <div class="rail"><div class="fill ${over ? 'over' : 'ok'}" style="width:${Math.min(100, Math.round(s / b * 100))}%"></div></div>
         <div class="rwho" style="margin-top:4px">${fmt(s)} su ${fmt(b)} €</div>
       </div>`;
-    }).join('') : `<div class="empty"><div class="big">Nessuna busta</div><p>Assegna un budget mensile a una categoria:<br>tocca qui sotto per iniziare.</p></div>`}
+    }).join('') : `<div class="empty"><div class="big">Nessuna busta</div><p>Assegna un budget a una categoria: vale da<br>questo mese in poi, senza rifarlo ogni volta.</p></div>`}
     ${withB.length ? `<hr class="r-rule solid"><div class="r-total"><span>Totale buste</span><span class="amt ${totS > totB ? 'neg' : ''}">${fmt(totS)} / ${fmt(totB)}<small> €</small></span></div>` : ''}
   </div><div class="perf"></div></div>
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
@@ -670,7 +685,7 @@ function sheetHtml() {
       <div class="lcd"><div class="lcd-top"><span>${label}</span><b>EUR</b></div>
         <div class="lcd-main"><span class="lcd-caption"></span>
         <span class="lcd-num"><span class="ghost" aria-hidden="true">${num.replace(/\d/g, '8')}</span><span class="lit">${num}</span></span></div>
-        <div class="lcd-sub">IN CENTESIMI · 1250 = 12,50</div>
+        <div class="lcd-sub">${sh.mode === 'budget' ? `VALE DA ${esc(monthLabel(S.month))} IN POI` : 'IN CENTESIMI · 1250 = 12,50'}</div>
       </div>
       <div class="pad">${keys.map(k => k === 'bksp'
         ? `<button class="key" data-act="pad-back" aria-label="Cancella ultima cifra">${icon('bksp', 22)}</button>`
@@ -844,7 +859,7 @@ function whoAmIView() {
 /* ---------- azioni ---------- */
 function openPad(mode, catId) {
   S.sheet = mode === 'budget'
-    ? { type: 'pad', mode, catId, draft: { amount: (meta().budgets || {})[catId] || 0 } }
+    ? { type: 'pad', mode, catId, draft: { amount: budgetAt((meta().budgets || {})[catId], S.month), fresh: true } }
     : { type: 'pad', draft: freshDraft() };
   render();
 }
@@ -889,11 +904,12 @@ const ACTS = {
   'pad-digit': el => {
     const d = S.sheet.draft;
     const digit = el.dataset.d;
+    if (d.fresh) { d.amount = 0; d.fresh = false; } // il valore gia' impostato e' solo un riferimento
     const next = digit === '00' ? d.amount * 100 : d.amount * 10 + Number(digit);
     if (next <= 99999999) d.amount = next;
     render();
   },
-  'pad-back': () => { const d = S.sheet.draft; d.amount = Math.floor(d.amount / 10); render(); },
+  'pad-back': () => { const d = S.sheet.draft; d.fresh = false; d.amount = Math.floor(d.amount / 10); render(); },
   'pad-next': () => { if (S.sheet.draft.amount > 0) { S.sheet = { type: 'detail', draft: S.sheet.draft }; render(); } },
   'back-to-pad': () => { S.sheet = { type: 'pad', draft: S.sheet.draft }; render(); },
 
@@ -957,16 +973,25 @@ const ACTS = {
   'set-budget': el => openPad('budget', el.dataset.id),
   'budget-save': async () => {
     const { catId, draft } = S.sheet;
-    const budgets = { ...(meta().budgets || {}), [catId]: draft.amount };
+    const mese = S.month;
+    const budgets = { ...(meta().budgets || {}) };
+    budgets[catId] = setBudgetFrom(budgets[catId], mese, draft.amount);
     S.sheet = null;
-    try { await db.updateMeta(S.gid, { budgets }); } catch (e) { toast(e.message); }
+    try {
+      await db.updateMeta(S.gid, { budgets });
+      toast(`Busta attiva da ${monthLabel(mese).toLowerCase()} in poi`);
+    } catch (e) { toast(e.message); }
   },
   'budget-zero': async () => {
     const { catId } = S.sheet;
+    const mese = S.month;
     const budgets = { ...(meta().budgets || {}) };
-    delete budgets[catId];
+    budgets[catId] = setBudgetFrom(budgets[catId], mese, 0); // i mesi precedenti restano com'erano
     S.sheet = null;
-    try { await db.updateMeta(S.gid, { budgets }); } catch (e) { toast(e.message); }
+    try {
+      await db.updateMeta(S.gid, { budgets });
+      toast(`Busta tolta da ${monthLabel(mese).toLowerCase()} in poi`);
+    } catch (e) { toast(e.message); }
   },
 
   'share-link': async () => {

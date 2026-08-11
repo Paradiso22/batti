@@ -52,7 +52,7 @@ const DEFAULT_CATS = [
   { id: 'risparmi', name: 'Risparmi', icon: 'piggy' },
   { id: 'altro', name: 'Altro', icon: 'box' },
 ];
-const VERSIONE = 'v3'; // si legge in Altro: serve a capire se un telefono e' aggiornato
+const VERSIONE = 'v4'; // si legge in Altro: serve a capire se un telefono e' aggiornato
 const MCOLORS = ['#2f6bd8', '#c76a10', '#0e9488', '#8a4fc9', '#8a7a1f', '#c94f7c'];
 // Promemoria: si alternano, così non diventano subito rumore di fondo.
 // Li legge anche il service worker (glieli passo nella cache di stato).
@@ -121,7 +121,11 @@ const safeId = s => typeof s === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(s);
 const CURRENT = 'batti:current';
 const setCurrent = id => localStorage.setItem(CURRENT, id);
 const getCurrent = () => localStorage.getItem(CURRENT);
-const fmt = fmtCents;
+// Importi nascosti: solo una maschera sullo schermo. I dati non vengono toccati
+// e la sincronizzazione non se ne accorge nemmeno (la scelta resta su questo telefono).
+const PRIVACY = 'batti:privacy';
+const importiNascosti = () => localStorage.getItem(PRIVACY) === '1';
+const fmt = cents => (importiNascosti() ? '•••' : fmtCents(cents));
 const lcdFmt = cents => (cents / 100).toFixed(2);
 const nav = h => { location.hash = h; };
 const meta = () => S.data?.meta;
@@ -843,7 +847,8 @@ function myBalanceLcd(tab) {
     : (solo ? 'Siete in pari' : 'Sei in pari');
   return lcd({
     line1: meta().name, line1b: fmtDay(todayISO()),
-    caption, num: me && mine !== 0 ? lcdFmt(Math.abs(mine)) : (me ? '0.00' : ''),
+    caption: importiNascosti() ? 'Importi nascosti' : caption,
+    num: importiNascosti() ? '' : (me && mine !== 0 ? lcdFmt(Math.abs(mine)) : (me ? '0.00' : '')),
     amber: mine < 0, sub: syncSub(), flash: !!S.justPrinted,
   });
 }
@@ -1155,6 +1160,17 @@ function altroView() {
       <button class="iconbtn danger" data-act="del-rec" data-id="${esc(r.id)}" aria-label="Elimina ricorrente">${icon('trash', 16)}</button>
     </div>`).join('')}</div>` : `<p class="r-note">Affitto, bollette, abbonamenti: si battono da soli, con la cadenza che scegli (anche ogni 2, 3, 6 o 12 mesi).</p>`}
     <div class="key-row"><button class="key key--wide" data-act="open-rec">${icon('plus', 16)} Nuova ricorrente</button></div>
+  </div><div class="perf"></div></div>
+
+  <div class="perf-wrap"><div class="perf top"></div><div class="paper">
+    <span class="f-label">Importi</span>
+    ${importiNascosti() ? `
+      <p class="r-note">Nascosti: al posto delle cifre vedi •••, comodo per mostrare l'app a qualcuno. Nulla viene modificato e l'altro telefono continua a vedere i suoi importi.</p>
+      <div class="key-row"><button class="key key--wide key--green" data-act="privacy-off">Mostra di nuovo gli importi</button></div>
+    ` : `
+      <p class="r-note">Puoi coprire tutte le cifre con •••, così mostri l'app senza far vedere quanto spendete. È solo una maschera su questo telefono: i dati restano intatti.</p>
+      <div class="key-row"><button class="key key--wide key--yellow" data-act="privacy-on">Nascondi gli importi</button></div>
+    `}
   </div><div class="perf"></div></div>
 
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
@@ -1543,6 +1559,8 @@ const ACTS = {
     } catch (e) { toast(e.message); }
   },
   'ai-off': () => { localStorage.removeItem(CHIAVE_AI); toast('Chiave rimossa da questo telefono'); render(); },
+  'privacy-on': () => { localStorage.setItem(PRIVACY, '1'); toast('Importi nascosti'); render(); },
+  'privacy-off': () => { localStorage.removeItem(PRIVACY); toast('Importi di nuovo visibili'); render(); },
   'proteggi': async () => {
     S.datiProtetti = await proteggiDati();
     toast(S.datiProtetti ? 'Fatto: i dati non verranno più cancellati' : 'Il telefono non ha concesso la protezione');

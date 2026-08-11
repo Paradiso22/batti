@@ -52,7 +52,8 @@
 }
 
 * { box-sizing: border-box; margin: 0; }
-html { height: 100%; }
+/* niente zoom col doppio tocco: l'app resta ferma come una vera applicazione */
+html { height: 100%; touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 body {
   height: 100%;
   font-family: var(--f-ui);
@@ -472,6 +473,41 @@ select.f-input { appearance: none; }
 .codechip { font-family: var(--f-mono); font-size: 11px; word-break: break-all; background: rgba(255,255,255,.5); border: 1px dashed var(--line); border-radius: 8px; padding: 8px 10px; }
 
 .screen { display: flex; flex-direction: column; height: 100%; }
+
+/* ---------- Scrivania: da PC il terminale si apre in orizzontale ----------
+   Stesso identico HTML: display e tasti passano a sinistra come su un POS da
+   banco, lo scontrino occupa lo spazio che resta. Sta in fondo al foglio
+   perche' deve avere l'ultima parola sulle regole di base. */
+@media (min-width: 1000px) {
+  .terminal { width: min(1180px, 96vw); max-width: none; height: min(900px, calc(100dvh - 48px)); border-radius: 26px; }
+  .screen {
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "lcd carta" "dock carta";
+  }
+  .lcd-frame { grid-area: lcd; padding: 18px 18px 8px; }
+  .lcd-num { font-size: 38px; }
+  .paper-scroll {
+    grid-area: carta; padding: 18px 26px 26px;
+    border-left: 1px solid rgba(255,255,255,.06);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .paper-scroll > * { width: 100%; max-width: 660px; }
+
+  /* la pulsantiera diventa una colonna, senza sfumatura sovrapposta */
+  .dock { grid-area: dock; position: static; background: none; padding: 0 18px 18px; display: flex; flex-direction: column; justify-content: flex-end; }
+  .dock-inner { border-top: 0; padding-top: 0; }
+  .nav { grid-template-columns: 1fr; gap: 8px; }
+  .nav-key { flex-direction: row; justify-content: flex-start; gap: 12px; padding: 12px 14px; font-size: 12px; letter-spacing: .08em; }
+  .nav-key svg { width: 20px; height: 20px; }
+  .nav-key .dot { margin-left: auto; }
+  .fab-row { flex-direction: column; padding: 0 0 12px; }
+  .composer { padding: 0 0 12px; }
+
+  .sheet { justify-content: center; align-items: center; }
+  .sheet-panel { max-width: 560px; border-radius: 18px; max-height: 88%; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .rrow--new, .sheet-panel, .toast, .lcd.is-flash .lcd-caption { animation: none; }

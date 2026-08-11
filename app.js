@@ -250,7 +250,28 @@ function comprimiFoto(file, latoMax = 1280, qualita = 0.6) {
 // in memoria locale. Senza chiave l'app funziona uguale, chiede l'importo a mano.
 const CHIAVE_AI = 'batti:gemini';
 const chiaveAI = () => localStorage.getItem(CHIAVE_AI) || '';
-const MODELLI = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+// I nomi dei modelli invecchiano (Google li pensiona): si chiede alla API quali
+// modelli vede la chiave e si preferisce il flash piu' recente. Lista fissa solo
+// come ultima spiaggia se l'elenco non risponde.
+const MODELLI_FALLBACK = ['gemini-3-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+let modelliVisti = null;
+async function modelliDisponibili(chiave) {
+  if (modelliVisti) return modelliVisti;
+  try {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + encodeURIComponent(chiave));
+    if (r.ok) {
+      const j = await r.json();
+      const nomi = (j.models || [])
+        .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+        .map(m => m.name.replace(/^models\//, ''))
+        .filter(n => /flash/.test(n) && !/(thinking|image|live|tts|audio|8b|lite)/.test(n));
+      const ver = n => parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [0, 0])[1]) || 0;
+      nomi.sort((a, b) => ver(b) - ver(a) || a.length - b.length);
+      if (nomi.length) { modelliVisti = nomi; return nomi; }
+    }
+  } catch { /* elenco non raggiungibile: uso la lista fissa */ }
+  return MODELLI_FALLBACK;
+}
 
 const PROMPT_SCONTRINO = `Leggi questo scontrino italiano e rispondi SOLO con JSON valido:
 {"totale": <numero in euro con due decimali, oppure null>, "negozio": "<nome breve, oppure null>", "data": "<AAAA-MM-GG, oppure null>"}
@@ -277,7 +298,7 @@ async function leggiScontrino(dataUrl, chiave) {
     generationConfig: { responseMimeType: 'application/json', temperature: 0 },
   };
   let ultimoErrore = 'nessun modello disponibile';
-  for (const modello of MODELLI) {
+  for (const modello of await modelliDisponibili(chiave)) {
     let r;
     try {
       r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modello}:generateContent?key=${encodeURIComponent(chiave)}`, {

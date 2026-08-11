@@ -1,6 +1,6 @@
 // sw.js - offline: precache dell'app, poi stale-while-revalidate.
 // Le richieste Firestore (dati) non passano di qui: pensa a tutto la cache dell'SDK.
-const CACHE = 'batti-v3'; // cambiando nome, all'attivazione la vecchia cache viene buttata: niente file misti
+const CACHE = 'batti-v4'; // cambiando nome, all'attivazione la vecchia cache viene buttata: niente file misti
 const STATO = 'batti-stato'; // stato dei promemoria, scritto dalla pagina e letto qui
 const CORE = [
   './', './index.html', './style.css', './app.js', './logic.js', './db.js',

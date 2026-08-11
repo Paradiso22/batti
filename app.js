@@ -52,7 +52,7 @@ const DEFAULT_CATS = [
   { id: 'risparmi', name: 'Risparmi', icon: 'piggy' },
   { id: 'altro', name: 'Altro', icon: 'box' },
 ];
-const VERSIONE = 'v2'; // si legge in Altro: serve a capire se un telefono e' aggiornato
+const VERSIONE = 'v3'; // si legge in Altro: serve a capire se un telefono e' aggiornato
 const MCOLORS = ['#2f6bd8', '#c76a10', '#0e9488', '#8a4fc9', '#8a7a1f', '#c94f7c'];
 // Promemoria: si alternano, così non diventano subito rumore di fondo.
 // Li legge anche il service worker (glieli passo nella cache di stato).
@@ -257,6 +257,18 @@ const PROMPT_SCONTRINO = `Leggi questo scontrino italiano e rispondi SOLO con JS
 Il totale e' la cifra finale effettivamente pagata: cerca TOTALE, TOT, TOTALE COMPLESSIVO, IMPORTO PAGATO.
 Non prendere il subtotale, il resto, il contante consegnato, l'IVA o i punti fedelta'.
 Se un dato non e' leggibile metti null.`;
+
+// Prova la chiave con una richiesta leggera (elenco modelli): non consuma
+// la quota di generazione e dice subito se Google la accetta.
+async function provaChiave(chiave) {
+  try {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(chiave)}`);
+    if (r.ok) return { ok: true };
+    if (r.status === 400 || r.status === 403) return { ok: false, errore: 'Google non la accetta, controlla di averla copiata tutta' };
+    if (r.status === 429) return { ok: false, errore: 'limite raggiunto, riprova più tardi' };
+    return { ok: false, errore: 'errore ' + r.status };
+  } catch { return { ok: false, errore: 'niente rete' }; }
+}
 
 async function leggiScontrino(dataUrl, chiave) {
   const base64 = dataUrl.split(',')[1];
@@ -1785,13 +1797,17 @@ const SUBMITS = {
       await db.sendMessage(S.gid, { id: db.uid(), from: myId(), text: testo, createdAt: Date.now() });
     } catch (e) { toast(e.message); }
   },
-  'ai-on': () => {
+  'ai-on': async () => {
     const v = document.getElementById('aikey').value.trim();
     if (!v) return;
-    if (!/^AIza[\w-]{20,}$/.test(v)) { toast('Non sembra una chiave di AI Studio (inizia con AIza)'); return; }
+    // nessun controllo sul formato: Google ne usa di diversi. Salvo e poi provo davvero.
     localStorage.setItem(CHIAVE_AI, v);
-    toast('Lettura scontrini attiva su questo telefono');
     render();
+    toast('Chiave salvata. Provo se funziona…', 3000);
+    const esito = await provaChiave(v);
+    toast(esito.ok
+      ? 'Funziona: da ora leggo gli scontrini dalle foto'
+      : `Salvata, ma la prova non è riuscita: ${esito.errore}`, 6000);
   },
   'rename-group': async () => {
     const name = document.getElementById('gnewname').value.trim();

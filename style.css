@@ -245,9 +245,9 @@ a { color: inherit; }
   background: linear-gradient(180deg, rgba(19,21,24,0) 0%, var(--chassis-1) 26%);
 }
 .dock-inner { border-top: 1px solid rgba(255,255,255,.06); padding-top: 10px; }
-.fab-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 0 4px 10px; pointer-events: none; }
-.fab-row .key { pointer-events: auto; font-size: 15px; padding: 15px 22px; border-radius: 14px; text-decoration: none; }
-.fab-row .key--sm { font-size: 13px; padding: 12px 16px; }
+/* i due tasti hanno la stessa identica misura: cambia solo il colore, che dice qual e' l'azione principale */
+.fab-row { display: flex; align-items: stretch; gap: 10px; padding: 0 4px 10px; pointer-events: none; }
+.fab-row .key { flex: 1; pointer-events: auto; font-size: 15px; padding: 15px 18px; border-radius: 14px; text-decoration: none; }
 .torna { display: inline-flex; align-items: center; gap: 5px; font-family: var(--f-mono); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); text-decoration: none; margin-bottom: 8px; }
 .nav { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .nav-key {

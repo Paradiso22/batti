@@ -663,7 +663,7 @@ function groupFrame(tab, lcdHtml, content, { fab = false, composer = false } = {
     <div class="paper-scroll">${content}</div>
     <div class="dock">
       ${fab ? `<div class="fab-row">
-        <a class="key key--sm" href="#/gruppo/chat">${icon('chat', 17)} Chat</a>
+        <a class="key" href="#/gruppo/chat">${icon('chat', 18)} Chat</a>
         <button class="key key--green" data-act="open-pad">${icon('plus', 18)} Batti spesa</button>
       </div>` : ''}
       ${composer ? `<form class="composer" data-act-submit="chat-invia">

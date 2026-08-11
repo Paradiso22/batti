@@ -585,7 +585,6 @@ function syncSub() {
 function navBar(tab) {
   const items = [
     ['scontrino', 'receipt', 'Spese', '#/gruppo'],
-    ['chat', 'chat', 'Chat', '#/gruppo/chat'],
     ['saldi', 'swap', 'Saldi', '#/gruppo/saldi'],
     ['buste', 'wallet', 'Buste', '#/gruppo/buste'],
     ['stats', 'chart', 'Stats', '#/gruppo/stats'],
@@ -601,7 +600,10 @@ function groupFrame(tab, lcdHtml, content, { fab = false, composer = false } = {
     ${lcdHtml}
     <div class="paper-scroll">${content}</div>
     <div class="dock">
-      ${fab ? `<div class="fab-row"><button class="key key--green" data-act="open-pad">${icon('plus', 18)} Batti spesa</button></div>` : ''}
+      ${fab ? `<div class="fab-row">
+        <a class="key key--sm" href="#/gruppo/chat">${icon('chat', 17)} Chat</a>
+        <button class="key key--green" data-act="open-pad">${icon('plus', 18)} Batti spesa</button>
+      </div>` : ''}
       ${composer ? `<form class="composer" data-act-submit="chat-invia">
         <button type="button" class="comp-btn" data-act="chat-foto" aria-label="Allega foto dello scontrino">${icon('camera', 20)}</button>
         <input class="comp-input" id="chatinput" autocomplete="off" placeholder="Es. Esselunga 43,20" maxlength="200">
@@ -819,6 +821,7 @@ function bollaHtml(m) {
 function chatView() {
   const msgs = S.data?.messages || [];
   const content = `<div class="perf-wrap"><div class="perf top"></div><div class="paper">
+    <a class="torna" href="#/gruppo">${icon('chevL', 15)} Spese</a>
     <div class="r-head"><div class="r-title">Chat</div><div class="r-meta">scrivi la spesa, la registro io</div></div>
     <hr class="r-rule">
     ${msgs.length ? `<div class="chatlista">${msgs.map(bollaHtml).join('')}</div>` : `
@@ -1751,4 +1754,15 @@ document.addEventListener('input', e => {
 
 route();
 
-if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+if ('serviceWorker' in navigator) {
+  // Quando arriva una versione nuova, la pagina si ricarica da sola: niente piu'
+  // "aprila due volte" e niente mix di file vecchi e nuovi.
+  const eraControllata = !!navigator.serviceWorker.controller;
+  let ricaricata = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!eraControllata || ricaricata) return;
+    ricaricata = true;
+    location.reload();
+  });
+  addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+}

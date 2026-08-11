@@ -1,6 +1,6 @@
 // sw.js - offline: precache dell'app, poi stale-while-revalidate.
 // Le richieste Firestore (dati) non passano di qui: pensa a tutto la cache dell'SDK.
-const CACHE = 'batti-v1';
+const CACHE = 'batti-v2'; // cambiando nome, all'attivazione la vecchia cache viene buttata: niente file misti
 const STATO = 'batti-stato'; // stato dei promemoria, scritto dalla pagina e letto qui
 const CORE = [
   './', './index.html', './style.css', './app.js', './logic.js', './db.js',
@@ -13,7 +13,13 @@ const CORE = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
+  // cache: 'reload' salta la cache HTTP del browser: i file arrivano davvero freschi,
+  // altrimenti si rischiava di installare CSS vecchio insieme a JS nuovo.
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(c => Promise.all(CORE.map(u => fetch(u, { cache: 'reload' }).then(r => r.ok && c.put(u, r)))))
+      .then(() => self.skipWaiting())
+  );
 });
 self.addEventListener('activate', e => {
   e.waitUntil(

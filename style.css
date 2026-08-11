@@ -431,7 +431,20 @@ select.f-input { appearance: none; }
   color: var(--silk);
 }
 .comp-btn--send { background: linear-gradient(180deg, var(--green-hi), var(--green)); box-shadow: 0 3px 0 var(--green-lo), inset 0 1px 0 rgba(255,255,255,.25); color: #fff; }
+.comp-btn--mic { background: linear-gradient(180deg, var(--green-hi), var(--green)); box-shadow: 0 3px 0 var(--green-lo), inset 0 1px 0 rgba(255,255,255,.25); color: #fff; }
 .comp-btn:active { transform: translateY(2px); box-shadow: none; }
+/* come nelle app di messaggi: microfono a campo vuoto, invio appena scrivi */
+.composer .comp-btn--send { display: none; }
+.composer.ha-testo .comp-btn--mic { display: none; }
+.composer.ha-testo .comp-btn--send { display: grid; }
+/* mentre ascolta il tasto pulsa in rosso */
+.composer.in-ascolto .comp-btn--mic {
+  background: linear-gradient(180deg, var(--red-hi), var(--red));
+  box-shadow: 0 3px 0 var(--red-lo), inset 0 1px 0 rgba(255,255,255,.25);
+  animation: ascolto 1.1s ease-in-out infinite;
+}
+@keyframes ascolto { 50% { box-shadow: 0 3px 0 var(--red-lo), 0 0 0 7px rgba(198,57,47,.25); } }
+@media (prefers-reduced-motion: reduce) { .composer.in-ascolto .comp-btn--mic { animation: none; } }
 
 /* ---------- Varie ---------- */
 

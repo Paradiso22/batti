@@ -34,6 +34,7 @@ const PATHS = {
   link: 'M9.5 14.5l5-5M8 11 5.5 13.5a3.5 3.5 0 0 0 5 5L13 16M11 8l2.5-2.5a3.5 3.5 0 0 1 5 5L16 13',
   chat: 'M4.5 6.5A1.5 1.5 0 0 1 6 5h12a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 18 16H9l-4.5 3.5V6.5ZM8.5 9h7M8.5 12h4',
   camera: 'M4 8.5A1.5 1.5 0 0 1 5.5 7h2L9 5h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5v-9Zm8 8.2a3.7 3.7 0 1 0 0-7.4 3.7 3.7 0 0 0 0 7.4Z',
+  mic: 'M12 3.5a2.6 2.6 0 0 1 2.6 2.6v5.4a2.6 2.6 0 0 1-5.2 0V6.1A2.6 2.6 0 0 1 12 3.5ZM6.5 11a5.5 5.5 0 0 0 11 0M12 16.5V20M9 20h6',
   send: 'M4 11.5 20 4l-7.5 16-2-6.5-6.5-2Z',
 };
 const icon = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${PATHS[n]}"/></svg>`;
@@ -157,6 +158,67 @@ function shiftMonth(mk, delta) {
   let [y, m] = mk.split('-').map(Number);
   m += delta; if (m > 12) { m = 1; y++; } if (m < 1) { m = 12; y--; }
   return `${y}-${String(m).padStart(2, '0')}`;
+}
+
+/* ---------- chat: dettatura ---------- */
+// Riconoscimento vocale del browser: gratuito, nessuna chiave, niente quota.
+// letta al momento dell'uso: alcuni browser la definiscono dopo il caricamento
+const vocale = () => window.SpeechRecognition || window.webkitSpeechRecognition;
+let dettatura = null;
+
+function fermaDettatura() {
+  try { dettatura?.stop(); } catch { /* gia' ferma */ }
+  dettatura = null;
+  document.querySelector('.composer')?.classList.remove('in-ascolto');
+}
+
+function avviaDettatura() {
+  const Vocale = vocale();
+  if (!Vocale) { toast('Questo browser non sa ascoltare: scrivi o usa la tastiera vocale'); return; }
+  if (dettatura) { fermaDettatura(); return; } // secondo tocco: chiudo
+
+  const campo = document.getElementById('chatinput');
+  const form = document.querySelector('.composer');
+  const r = new Vocale();
+  r.lang = 'it-IT';
+  r.interimResults = true;   // si vede scrivere mentre parli
+  r.continuous = false;
+  r.maxAlternatives = 1;
+
+  r.onstart = () => form?.classList.add('in-ascolto');
+  r.onresult = e => {
+    let testo = '';
+    for (const res of e.results) testo += res[0].transcript;
+    campo.value = testo.trim();
+    aggiornaComposer();
+    // frase conclusa: la mando come se l'avessi scritta
+    if (e.results[e.results.length - 1].isFinal && campo.value) {
+      fermaDettatura();
+      form.requestSubmit();
+    }
+  };
+  r.onerror = e => {
+    const motivi = {
+      'not-allowed': 'Permesso microfono negato: attivalo dalle impostazioni del sito',
+      'service-not-allowed': 'Permesso microfono negato',
+      'no-speech': 'Non ho sentito nulla, riprova',
+      'audio-capture': 'Microfono non disponibile',
+      network: 'Serve la rete per il dettato',
+    };
+    toast(motivi[e.error] || 'Dettatura non riuscita');
+    fermaDettatura();
+  };
+  r.onend = () => { document.querySelector('.composer')?.classList.remove('in-ascolto'); dettatura = null; };
+
+  dettatura = r;
+  try { r.start(); } catch { fermaDettatura(); }
+}
+
+// microfono quando il campo e' vuoto, freccia d'invio appena scrivi
+function aggiornaComposer() {
+  const campo = document.getElementById('chatinput');
+  const form = document.querySelector('.composer');
+  if (campo && form) form.classList.toggle('ha-testo', !!campo.value.trim());
 }
 
 /* ---------- chat: foto ---------- */
@@ -606,7 +668,8 @@ function groupFrame(tab, lcdHtml, content, { fab = false, composer = false } = {
       </div>` : ''}
       ${composer ? `<form class="composer" data-act-submit="chat-invia">
         <button type="button" class="comp-btn" data-act="chat-foto" aria-label="Allega foto dello scontrino">${icon('camera', 20)}</button>
-        <input class="comp-input" id="chatinput" autocomplete="off" placeholder="Es. Esselunga 43,20" maxlength="200">
+        <input class="comp-input" id="chatinput" autocomplete="off" placeholder="Scrivi o detta la spesa" maxlength="200">
+        <button type="button" class="comp-btn comp-btn--mic" data-act="chat-detta" aria-label="Detta la spesa a voce">${icon('mic', 20)}</button>
         <button type="submit" class="comp-btn comp-btn--send" aria-label="Invia">${icon('send', 20)}</button>
         <input type="file" id="chatfile" accept="image/*" capture="environment" hidden>
       </form>` : ''}
@@ -1368,6 +1431,7 @@ const ACTS = {
   'go-new': () => nav('#/new'),
   'open-group': el => { setCurrent(el.dataset.id); nav('#/gruppo'); },
   'chat-foto': () => document.getElementById('chatfile')?.click(),
+  'chat-detta': () => avviaDettatura(),
   'prop-apri': el => {
     const { id, campo } = el.dataset;
     S.chatApri = (S.chatApri?.id === id && S.chatApri.campo === campo) ? null : { id, campo };
@@ -1674,6 +1738,7 @@ const SUBMITS = {
     const testo = inp.value.trim();
     if (!testo) return;
     inp.value = '';
+    aggiornaComposer();
     try {
       await db.sendMessage(S.gid, { id: db.uid(), from: myId(), text: testo, createdAt: Date.now() });
     } catch (e) { toast(e.message); }
@@ -1737,6 +1802,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && S.sheet) { S.sheet = null; render(); }
 });
 document.addEventListener('input', e => {
+  if (e.target.id === 'chatinput') { aggiornaComposer(); return; } // la chat non ha bozze aperte
   const d = S.sheet?.draft;
   if (!d) return;
   if (e.target.id === 'ddesc' || e.target.id === 'sdesc') d.desc = e.target.value;

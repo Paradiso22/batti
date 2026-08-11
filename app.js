@@ -105,7 +105,7 @@ const todayISO = () => {
 const S = {
   route: [], gid: null, data: null, unsub: null, loadErr: null, chatInCorso: new Set(), chatApri: null,
   sheet: null, month: monthKey(todayISO()),
-  online: navigator.onLine, justPrinted: null,
+  online: navigator.onLine, justPrinted: null, datiProtetti: false,
 };
 
 /* ---------- helpers ---------- */
@@ -402,6 +402,17 @@ function battutaSpesa(exp, expsPrecedenti) {
   return null;
 }
 
+/* ---------- dati al sicuro ---------- */
+// Senza questo, Android puo' cancellare i dati del sito quando lo spazio
+// scarseggia: sparirebbe il gruppo e servirebbe di nuovo il link di invito.
+async function proteggiDati() {
+  try {
+    if (!navigator.storage?.persist) return false;
+    if (await navigator.storage.persisted()) return true;
+    return await navigator.storage.persist();
+  } catch { return false; }
+}
+
 /* ---------- promemoria ---------- */
 const GIORNI_SILENZIO = 3;      // dopo 2 giorni pieni senza spese, il terzo si fa vivo
 const PROM_ATTIVI = 'batti:promemoria';
@@ -576,10 +587,24 @@ addEventListener('hashchange', () => { S.sheet = null; route(); });
 addEventListener('online', () => { S.online = true; render(); });
 addEventListener('offline', () => { S.online = false; render(); });
 
+let primoAvvio = true;
+
 function route() {
   S.route = parseRoute();
   const [a, b] = S.route;
   const coda = rest => `${rest ? '/' + rest : ''}${S.flag ? '!' + S.flag : ''}`;
+
+  // Aprendo l'app si entra diritti nell'ultimo gruppo usato, senza ripassare
+  // dalla schermata iniziale (che sembrava un'uscita dal gruppo).
+  if (primoAvvio && !a) {
+    primoAvvio = false;
+    const ultimo = getCurrent();
+    if (safeId(ultimo || '') && db.myGroups().some(g => g.id === ultimo)) {
+      location.replace('#/gruppo');
+      return;
+    }
+  }
+  primoAvvio = false;
 
   if (a === 'demo') { // demo: apre il gruppo d'esempio senza id nell'indirizzo
     seedDemo();
@@ -1099,6 +1124,14 @@ function altroView() {
   </div><div class="perf"></div></div>
 
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
+    <span class="f-label">Dati su questo telefono</span>
+    ${S.datiProtetti
+      ? `<p class="r-note">Protetti: il telefono non li cancella per fare spazio. Il gruppo resta al suo posto.</p>`
+      : `<p class="r-note">Non ancora protetti: se lo spazio scarseggia il telefono potrebbe cancellarli, e per rientrare servirebbe il link di invito.</p>
+         <div class="key-row"><button class="key key--wide key--green" data-act="proteggi">Proteggi i dati</button></div>`}
+  </div><div class="perf"></div></div>
+
+  <div class="perf-wrap"><div class="perf top"></div><div class="paper">
     <span class="f-label">Lettura automatica degli scontrini</span>
     ${chiaveAI() ? `
       <p class="r-note">Attiva su questo telefono: le foto degli scontrini vengono lette e l'importo si compila da solo.</p>
@@ -1473,6 +1506,11 @@ const ACTS = {
     } catch (e) { toast(e.message); }
   },
   'ai-off': () => { localStorage.removeItem(CHIAVE_AI); toast('Chiave rimossa da questo telefono'); render(); },
+  'proteggi': async () => {
+    S.datiProtetti = await proteggiDati();
+    toast(S.datiProtetti ? 'Fatto: i dati non verranno più cancellati' : 'Il telefono non ha concesso la protezione');
+    render();
+  },
   'prom-on': () => attivaPromemoria(),
   'prom-off': () => disattivaPromemoria(),
   'close-sheet': () => { S.sheet = null; render(); },
@@ -1819,6 +1857,9 @@ document.addEventListener('input', e => {
 });
 
 route();
+
+// all'avvio chiedo al telefono di non cancellare i dati per fare spazio
+proteggiDati().then(ok => { S.datiProtetti = ok; if (S.route[1] === 'altro') render(); });
 
 if ('serviceWorker' in navigator) {
   // Quando arriva una versione nuova, la pagina si ricarica da sola: niente piu'

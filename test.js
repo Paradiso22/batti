@@ -1,5 +1,5 @@
 // test.js - controlli sul motore soldi: node test.js
-import { computeShares, computeBalances, settlePlan, dueRecurring, parseAmount, budgetAt, setBudgetFrom } from './logic.js';
+import { computeShares, computeBalances, settlePlan, dueRecurring, parseAmount, budgetAt, setBudgetFrom, interpretaSpesa } from './logic.js';
 import assert from 'node:assert';
 
 const ids = ['a', 'b', 'c'];
@@ -101,5 +101,51 @@ assert.equal(budgetAt(15000, '2020-01'), 15000);
 const conv = setBudgetFrom(15000, '2026-09', 20000);
 assert.equal(budgetAt(conv, '2026-08'), 15000);
 assert.equal(budgetAt(conv, '2026-09'), 20000);
+
+// interprete della chat: capisce le frasi scritte a mano
+const CTX = { membri: [{ id: 'g', name: 'Giò' }, { id: 'e', name: 'Ele' }], ioId: 'g', oggi: '2026-08-09' };
+const leggi = t => interpretaSpesa(t, CTX);
+
+let r = leggi('Esselunga 43,20');
+assert.equal(r.amount, 4320);
+assert.equal(r.catId, 'spesa');
+assert.equal(r.paidBy, 'g');           // di default paga chi scrive
+assert.deepEqual(r.quote, ['g', 'e']); // e si divide tra tutti
+assert.equal(r.desc, 'Esselunga');
+assert.deepEqual(r.mancanti, []);
+
+// chi ha pagato, detto a parole
+assert.equal(leggi('sushi 62 ha pagato Ele').paidBy, 'e');
+assert.equal(leggi('affitto 780 paga Ele').paidBy, 'e');
+assert.equal(leggi('affitto 780 paga Ele').desc, 'affitto');
+
+// "offro io": pago io e resta tutta a me
+r = leggi('ieri pizza 28,50 offro io');
+assert.equal(r.paidBy, 'g');
+assert.deepEqual(r.quote, ['g']);
+assert.equal(r.date, '2026-08-08');    // "ieri"
+assert.equal(r.catId, 'fuori');
+
+// tutta a carico dell'altra persona
+assert.deepEqual(leggi('amazon 24,99 tutta a Ele').quote, ['e']);
+assert.equal(leggi('amazon 24,99 tutta a Ele').catId, 'shopping');
+
+// importi scritti in modi diversi
+assert.equal(leggi('cinema 20 euro').amount, 2000);
+assert.equal(leggi('sushi 62€ paga Ele').amount, 6200);
+assert.equal(leggi('benzina 50').amount, 5000);
+assert.equal(leggi('spesa 12/08 35 euro').date, '2026-08-12'); // data scritta
+assert.equal(leggi('spesa 12/08 35 euro').desc, 'spesa');
+
+// cosa manca: sono le domande che fara' l'app
+assert.deepEqual(leggi('farmacia').mancanti, ['importo']);
+assert.deepEqual(leggi('boh 15').mancanti, ['categoria']);
+assert.deepEqual(leggi('').mancanti, ['importo', 'categoria']);
+
+// categorie riconosciute dalle parole
+assert.equal(leggi('serata caraibica 30').catId, 'svago');
+assert.equal(leggi('bolletta luce 90').catId, 'bollette');
+assert.equal(leggi('messo da parte 200').catId, 'risparmi');
+assert.equal(leggi('treno 18,90').catId, 'trasporti');
 
 console.log('OK - tutti i controlli passano');

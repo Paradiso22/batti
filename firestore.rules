@@ -22,6 +22,14 @@ service cloud.firestore {
                     && request.resource.data.name.size() <= 60
                     && request.resource.data.members.size() <= 30;
 
+      // chat del gruppo: testo corto e foto compressa, niente allegati enormi
+      match /messages/{messageId} {
+        allow read, delete: if true;
+        allow create, update: if request.resource.data.from is string
+                              && (!('text' in request.resource.data) || request.resource.data.text.size() <= 500)
+                              && (!('photo' in request.resource.data) || request.resource.data.photo.size() <= 900000);
+      }
+
       match /expenses/{expenseId} {
         allow read, delete: if true;
         // Le spese devono avere forma valida: importo intero non negativo e

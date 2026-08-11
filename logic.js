@@ -127,6 +127,127 @@ export function setBudgetFrom(b, month, amount) {
   return list.sort((x, y) => (x.from < y.from ? -1 : 1));
 }
 
+// Parole che fanno indovinare la categoria da una frase scritta a mano.
+export const PAROLE_CATEGORIA = {
+  spesa: ['spesa', 'supermercato', 'esselunga', 'lidl', 'coop', 'conad', 'carrefour', 'eurospin', 'penny', 'md', 'bennet', 'pam', 'despar', 'ipercoop', 'discount'],
+  casa: ['casa', 'affitto', 'ikea', 'mutuo', 'condominio', 'detersivi', 'ferramenta', 'mobili', 'lampadine'],
+  bollette: ['bolletta', 'bollette', 'luce', 'gas', 'acqua', 'internet', 'wifi', 'telefono', 'enel', 'tim', 'vodafone', 'fastweb', 'iliad', 'netflix', 'spotify', 'abbonamento'],
+  fuori: ['sushi', 'pizza', 'pizzeria', 'ristorante', 'cena', 'pranzo', 'bar', 'aperitivo', 'trattoria', 'osteria', 'hamburger', 'kebab', 'asporto', 'domicilio', 'glovo', 'deliveroo', 'justeat', 'poke', 'gelato', 'colazione', 'brunch'],
+  shopping: ['zara', 'vestiti', 'scarpe', 'amazon', 'shopping', 'maglietta', 'pantaloni', 'giacca', 'borsa', 'profumo', 'regalo', 'h&m', 'decathlon'],
+  trasporti: ['benzina', 'gasolio', 'diesel', 'carburante', 'treno', 'taxi', 'metro', 'metropolitana', 'autobus', 'bus', 'pedaggio', 'autostrada', 'parcheggio', 'aereo', 'volo', 'uber', 'bolt', 'revisione', 'gomme'],
+  svago: ['cinema', 'concerto', 'discoteca', 'ballo', 'salsa', 'bachata', 'kizomba', 'caraibica', 'serata', 'teatro', 'museo', 'palestra', 'libro', 'videogioco', 'festa'],
+  salute: ['farmacia', 'medico', 'dentista', 'visita', 'medicine', 'analisi', 'ottico', 'occhiali', 'fisioterapia'],
+  viaggi: ['hotel', 'albergo', 'viaggio', 'vacanza', 'bnb', 'airbnb', 'ostello', 'campeggio', 'escursione'],
+  risparmi: ['risparmi', 'risparmio', 'messo da parte', 'salvadanaio', 'accantonato'],
+};
+
+const senzaAccenti = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+function leggiImporto(testo) {
+  // Preferisce il numero vicino a un simbolo di euro, poi quello con i decimali.
+  const candidati = [];
+  const re = /(?:€\s*)?(\d{1,7}(?:[.,]\d{1,2})?)(?:\s*(?:€|euro|eur))?/gi;
+  let m;
+  while ((m = re.exec(testo)) !== null) {
+    const grezzo = m[0], num = m[1];
+    const cent = parseAmount(num);
+    if (cent === null || cent <= 0) continue;
+    candidati.push({
+      cent,
+      conEuro: /€|eur/i.test(grezzo),
+      conDecimali: /[.,]/.test(num),
+    });
+  }
+  if (!candidati.length) return null;
+  const meglio = candidati.find(c => c.conEuro) || candidati.find(c => c.conDecimali)
+    || candidati.sort((a, b) => b.cent - a.cent)[0];
+  return meglio.cent;
+}
+
+function leggiData(testo, oggi) {
+  const t = senzaAccenti(testo);
+  const giorno = ms => {
+    const d = new Date(oggi + 'T12:00:00');
+    d.setDate(d.getDate() - ms);
+    return d.toISOString().slice(0, 10);
+  };
+  if (/\bavantieri|l'altro ieri|altroieri\b/.test(t)) return giorno(2);
+  if (/\bieri\b/.test(t)) return giorno(1);
+  const esplicita = testo.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);
+  if (esplicita) {
+    const [, g, mth, a] = esplicita;
+    const anno = a ? (a.length === 2 ? '20' + a : a) : oggi.slice(0, 4);
+    const gg = String(Number(g)).padStart(2, '0'), mm = String(Number(mth)).padStart(2, '0');
+    if (Number(mth) >= 1 && Number(mth) <= 12 && Number(g) >= 1 && Number(g) <= 31) return `${anno}-${mm}-${gg}`;
+  }
+  return oggi;
+}
+
+// Legge una frase scritta a mano e prova a ricavarne una spesa.
+// ctx: { membri:[{id,name}], ioId, oggi:'YYYY-MM-DD' }
+// Ritorna sempre un oggetto; `mancanti` elenca cosa va ancora chiesto.
+export function interpretaSpesa(testo, ctx) {
+  const t = senzaAccenti(testo || '');
+  const membri = ctx.membri || [];
+  const trovaMembro = frammento => membri.find(m => senzaAccenti(m.name) === frammento)
+    || membri.find(m => frammento.includes(senzaAccenti(m.name)));
+
+  const consumati = []; // pezzi di frase gia' interpretati: fuori dalla descrizione
+
+  // chi ha anticipato i soldi
+  let paidBy = ctx.ioId;
+  const chiPaga = t.match(/(?:ha pagato|pagato da|paga|offre|ha offerto)\s+([a-z]+)/);
+  if (chiPaga) {
+    const m = trovaMembro(chiPaga[1]);
+    if (m) { paidBy = m.id; consumati.push(chiPaga[0]); }
+  }
+  const ioPago = t.match(/\b(pago io|ho pagato io|ho pagato|offro io|pagato io)\b/);
+  if (ioPago) { paidBy = ctx.ioId; consumati.push(ioPago[0]); }
+
+  // a carico di chi
+  let quote = membri.map(m => m.id);
+  const tuttaMia = t.match(/\b(offro io|tutta a me|solo io|a carico mio|tutta mia)\b/);
+  if (tuttaMia) {
+    quote = [ctx.ioId];
+    consumati.push(tuttaMia[0]);
+  } else {
+    const soloAltro = t.match(/(?:tutta a|solo|a carico di)\s+([a-z]+)/);
+    if (soloAltro) {
+      const m = trovaMembro(soloAltro[1]);
+      if (m) { quote = [m.id]; consumati.push(soloAltro[0]); }
+    }
+  }
+
+  // categoria
+  let catId = null;
+  for (const [id, parole] of Object.entries(PAROLE_CATEGORIA)) {
+    if (parole.some(p => t.includes(senzaAccenti(p)))) { catId = id; break; }
+  }
+
+  const amount = leggiImporto(testo);
+  const date = leggiData(testo, ctx.oggi);
+
+  // descrizione: la frase senza i pezzi gia' interpretati (importo, data, chi paga...)
+  let desc = testo || '';
+  for (const pezzo of consumati) {
+    const i = senzaAccenti(desc).indexOf(pezzo);
+    if (i >= 0) desc = desc.slice(0, i) + ' ' + desc.slice(i + pezzo.length);
+  }
+  desc = desc
+    .replace(/\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/g, ' ')        // date scritte
+    .replace(/(?:€\s*)?\d{1,7}(?:[.,]\d{1,2})?\s*(?:€|euro|eur)?/gi, ' ') // importi
+    .replace(/\b(ieri|oggi|avantieri|altroieri)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s\-–,.:;]+|[\s\-–,.:;]+$/g, '')
+    .trim();
+
+  const mancanti = [];
+  if (!amount) mancanti.push('importo');
+  if (!catId) mancanti.push('categoria');
+
+  return { amount, catId, paidBy, quote, date, desc, mancanti };
+}
+
 export function fmtCents(cents) {
   return (cents / 100).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }

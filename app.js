@@ -1,5 +1,5 @@
 // app.js - interfaccia. Stato in S, render a stringhe, eventi delegati con data-act.
-import { computeShares, computeBalances, settlePlan, dueRecurring, monthKey, fmtCents, parseAmount, budgetAt, setBudgetFrom } from './logic.js';
+import { computeShares, computeBalances, settlePlan, dueRecurring, monthKey, fmtCents, parseAmount, budgetAt, setBudgetFrom, interpretaSpesa } from './logic.js';
 import * as db from './db.js';
 
 /* ---------- icone: unico set, tratto 1.75 ---------- */
@@ -32,6 +32,9 @@ const PATHS = {
   bksp: 'M8.5 5h11A1.5 1.5 0 0 1 21 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-11L3 12l5.5-7ZM11.5 9.5l5 5m0-5-5 5',
   users: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-6 9c0-3 2.7-5 6-5s6 2 6 5M16.5 10.5a3 3 0 1 0-2-5.2M16 15.2c2.9.2 5 2 5 4.8',
   link: 'M9.5 14.5l5-5M8 11 5.5 13.5a3.5 3.5 0 0 0 5 5L13 16M11 8l2.5-2.5a3.5 3.5 0 0 1 5 5L16 13',
+  chat: 'M4.5 6.5A1.5 1.5 0 0 1 6 5h12a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 18 16H9l-4.5 3.5V6.5ZM8.5 9h7M8.5 12h4',
+  camera: 'M4 8.5A1.5 1.5 0 0 1 5.5 7h2L9 5h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5v-9Zm8 8.2a3.7 3.7 0 1 0 0-7.4 3.7 3.7 0 0 0 0 7.4Z',
+  send: 'M4 11.5 20 4l-7.5 16-2-6.5-6.5-2Z',
 };
 const icon = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${PATHS[n]}"/></svg>`;
 
@@ -99,7 +102,7 @@ const todayISO = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 const S = {
-  route: [], gid: null, data: null, unsub: null, loadErr: null,
+  route: [], gid: null, data: null, unsub: null, loadErr: null, chatInCorso: new Set(), chatApri: null,
   sheet: null, month: monthKey(todayISO()),
   online: navigator.onLine, justPrinted: null,
 };
@@ -154,6 +157,70 @@ function shiftMonth(mk, delta) {
   let [y, m] = mk.split('-').map(Number);
   m += delta; if (m > 12) { m = 1; y++; } if (m < 1) { m = 12; y--; }
   return `${y}-${String(m).padStart(2, '0')}`;
+}
+
+/* ---------- chat: foto ---------- */
+// Le foto viaggiano dentro il messaggio, quindi vanno rimpicciolite: una foto
+// da telefono e' 3-5 MB, il limite per documento e' 1 MB.
+function comprimiFoto(file, latoMax = 1280, qualita = 0.6) {
+  return new Promise((ok, ko) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scala = Math.min(1, latoMax / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * scala);
+      c.height = Math.round(img.height * scala);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      let q = qualita, dati = c.toDataURL('image/jpeg', q);
+      while (dati.length > 700000 && q > 0.25) { q -= 0.1; dati = c.toDataURL('image/jpeg', q); }
+      dati.length > 900000 ? ko(new Error('Foto troppo grande, riprova con una più piccola')) : ok(dati);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); ko(new Error('Non riesco a leggere la foto')); };
+    img.src = url;
+  });
+}
+
+/* ---------- chat: interpretazione ---------- */
+// Ogni telefono elabora SOLO i messaggi scritti da chi lo usa: cosi' la risposta
+// non viene generata due volte quando siete tutti e due online.
+async function elaboraChat(data) {
+  const me = myId();
+  if (!me || !S.gid) return;
+  const msgs = data.messages || [];
+  const giaRisposti = new Set(msgs.map(m => m.rif).filter(Boolean));
+  const daFare = msgs.filter(m => m.from === me && !giaRisposti.has(m.id));
+  for (const m of daFare) {
+    if (S.chatInCorso.has(m.id)) continue;
+    S.chatInCorso.add(m.id);
+    const r = interpretaSpesa(m.text || '', {
+      membri: data.meta.members, ioId: me, oggi: todayISO(),
+    });
+    const bozza = {
+      amount: r.amount || 0, catId: r.catId || '', paidBy: r.paidBy, quote: r.quote,
+      date: r.date, desc: r.desc || (r.catId ? cat(r.catId).name : ''),
+      chatId: m.photo ? m.id : '',
+    };
+    let testo;
+    if (m.photo && !r.amount) testo = 'Scontrino ricevuto. Quanto hai speso?';
+    else if (!r.amount && !r.catId) testo = 'Non ho capito bene: dimmi almeno quanto hai speso.';
+    else if (!r.amount) testo = 'Quanto hai speso?';
+    else if (!r.catId) testo = 'Di che categoria è?';
+    else testo = 'Ho capito così, confermi?';
+    await db.sendMessage(S.gid, {
+      id: db.uid(), from: 'app', rif: m.id, text: testo,
+      bozza, stato: 'attesa', createdAt: Date.now(),
+    });
+  }
+}
+
+// Aggiorna la bozza dentro il messaggio-proposta (lo vedono entrambi i telefoni).
+async function aggiornaProposta(msgId, patch) {
+  const m = (S.data?.messages || []).find(x => x.id === msgId);
+  if (!m) return;
+  const { id, ...resto } = m;
+  await db.sendMessage(S.gid, { id, ...resto, ...patch, bozza: { ...m.bozza, ...(patch.bozza || {}) } });
 }
 
 /* ---------- battute ---------- */
@@ -376,6 +443,7 @@ function ensureGroup(gid) {
         }
       }
     }
+    elaboraChat(data).catch(e => toast(e.message));
     salvaStatoPromemoria(data.expenses);
     if (!S.promemoriaVisto) { S.promemoriaVisto = true; promemoriaAllApertura(data.expenses); }
     render();
@@ -457,22 +525,29 @@ function syncSub() {
 function navBar(tab) {
   const items = [
     ['scontrino', 'receipt', 'Spese', '#/gruppo'],
+    ['chat', 'chat', 'Chat', '#/gruppo/chat'],
     ['saldi', 'swap', 'Saldi', '#/gruppo/saldi'],
     ['buste', 'wallet', 'Buste', '#/gruppo/buste'],
     ['stats', 'chart', 'Stats', '#/gruppo/stats'],
     ['altro', 'gear', 'Altro', '#/gruppo/altro'],
   ];
   return `<nav class="nav" aria-label="Sezioni del gruppo">${items.map(([id, ic, label, href]) =>
-    `<a class="nav-key" href="${esc(href)}" ${tab === id ? 'aria-current="page"' : ''}>${icon(ic, 19)}<span>${label}</span><span class="dot"></span></a>`
+    `<a class="nav-key" href="${esc(href)}" ${tab === id ? 'aria-current="page"' : ''}>${icon(ic, 17)}<span>${label}</span><span class="dot"></span></a>`
   ).join('')}</nav>`;
 }
 
-function groupFrame(tab, lcdHtml, content, { fab = false } = {}) {
+function groupFrame(tab, lcdHtml, content, { fab = false, composer = false } = {}) {
   return `<div class="terminal"><div class="screen">
     ${lcdHtml}
     <div class="paper-scroll">${content}</div>
     <div class="dock">
       ${fab ? `<div class="fab-row"><button class="key key--green" data-act="open-pad">${icon('plus', 18)} Batti spesa</button></div>` : ''}
+      ${composer ? `<form class="composer" data-act-submit="chat-invia">
+        <button type="button" class="comp-btn" data-act="chat-foto" aria-label="Allega foto dello scontrino">${icon('camera', 20)}</button>
+        <input class="comp-input" id="chatinput" autocomplete="off" placeholder="Es. Esselunga 43,20" maxlength="200">
+        <button type="submit" class="comp-btn comp-btn--send" aria-label="Invia">${icon('send', 20)}</button>
+        <input type="file" id="chatfile" accept="image/*" capture="environment" hidden>
+      </form>` : ''}
       <div class="dock-inner">${navBar(tab)}</div>
     </div>
   </div>${S.sheet ? sheetHtml() : ''}</div>`;
@@ -625,6 +700,72 @@ function receiptView() {
     <div class="r-total"><span>Totale ${monthLabel(S.month).toLowerCase()}</span><span class="amt">${fmt(total)}<small> €</small></span></div>
   </div><div class="perf"></div></div>`;
   return groupFrame('scontrino', myBalanceLcd('scontrino'), content, { fab: true });
+}
+
+/* ---------- chat ---------- */
+const oraBreve = ts => {
+  const d = new Date(ts || Date.now());
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
+function propostaHtml(m) {
+  const b = m.bozza || {};
+  const aperto = S.chatApri?.id === m.id ? S.chatApri.campo : null;
+  const nomi = ids => (ids || []).map(mname).join(' e ');
+  if (m.stato === 'fatta') {
+    return `<div class="prop prop--fatta">${icon('check', 15)} Registrata: <b>${esc(b.desc || cat(b.catId).name)}</b> ${fmt(b.amount)} €</div>`;
+  }
+  if (m.stato === 'annullata') return `<div class="prop prop--no">Proposta annullata.</div>`;
+  const manca = !b.amount;
+  return `<div class="prop">
+    <div class="prop-riga"><span>Importo</span><button class="prop-val ${manca ? 'manca' : ''}" data-act="prop-importo" data-id="${esc(m.id)}">${manca ? 'quanto? tocca qui' : fmt(b.amount) + ' €'}</button></div>
+    <div class="prop-riga"><span>Categoria</span><button class="prop-val ${b.catId ? '' : 'manca'}" data-act="prop-apri" data-id="${esc(m.id)}" data-campo="cat">${b.catId ? esc(cat(b.catId).name) : 'quale?'}</button></div>
+    <div class="prop-riga"><span>Ha anticipato</span><button class="prop-val" data-act="prop-apri" data-id="${esc(m.id)}" data-campo="chi">${esc(mname(b.paidBy))}</button></div>
+    <div class="prop-riga"><span>A carico di</span><button class="prop-val" data-act="prop-apri" data-id="${esc(m.id)}" data-campo="quote">${esc(nomi(b.quote))}</button></div>
+    <div class="prop-riga"><span>Data</span><span class="prop-val">${fmtDay(b.date)}</span></div>
+    ${aperto === 'cat' ? `<div class="catgrid" style="margin-top:8px">${cats().map(c =>
+      `<button class="catbtn" data-act="prop-set-cat" data-id="${esc(m.id)}" data-v="${esc(c.id)}" aria-pressed="${c.id === b.catId}">${icon(c.icon, 18)}<span>${esc(c.name)}</span></button>`).join('')}</div>` : ''}
+    ${aperto === 'chi' ? `<div class="chips" style="margin-top:8px">${members().map(x =>
+      `<button class="chip" style="--mcol:${mcolorOf(x)}" data-act="prop-set-chi" data-id="${esc(m.id)}" data-v="${esc(x.id)}" aria-pressed="${x.id === b.paidBy}"><span class="cdot"></span>${esc(x.name)}</button>`).join('')}</div>` : ''}
+    ${aperto === 'quote' ? `<div class="chips" style="margin-top:8px">
+      <button class="chip" data-act="prop-set-quote" data-id="${esc(m.id)}" data-v="tutti" aria-pressed="${(b.quote || []).length === members().length}">Divisa</button>
+      ${members().map(x => `<button class="chip" style="--mcol:${mcolorOf(x)}" data-act="prop-set-quote" data-id="${esc(m.id)}" data-v="${esc(x.id)}" aria-pressed="${(b.quote || []).length === 1 && b.quote[0] === x.id}"><span class="cdot"></span>Solo ${esc(x.name)}</button>`).join('')}
+    </div>` : ''}
+    ${b.amount ? `<div class="prop-esito">${esitoHtml({ ...b, splitMode: 'equal', selected: b.quote })}</div>` : ''}
+    <div class="key-row" style="margin-top:10px">
+      <button class="key key--sm key--red" data-act="prop-no" data-id="${esc(m.id)}">Annulla</button>
+      <button class="key key--sm key--green" data-act="prop-ok" data-id="${esc(m.id)}" ${b.amount ? '' : 'disabled'}>Registra</button>
+    </div>
+  </div>`;
+}
+
+function bollaHtml(m) {
+  const mio = m.from === myId();
+  if (m.from === 'app') {
+    return `<div class="bolla bolla--app">
+      ${m.text ? `<div class="bolla-testo">${esc(m.text)}</div>` : ''}
+      ${m.bozza ? propostaHtml(m) : ''}
+      <div class="bolla-ora">${oraBreve(m.createdAt)}</div>
+    </div>`;
+  }
+  return `<div class="bolla ${mio ? 'bolla--mia' : ''}">
+    <div class="bolla-chi" style="--mcol:${mcolorOf(member(m.from) || {})}">${esc(mname(m.from))}</div>
+    ${m.photo ? `<img class="bolla-foto" src="${esc(m.photo)}" alt="Foto dello scontrino">` : ''}
+    ${m.text ? `<div class="bolla-testo">${esc(m.text)}</div>` : ''}
+    <div class="bolla-ora">${oraBreve(m.createdAt)}</div>
+  </div>`;
+}
+
+function chatView() {
+  const msgs = S.data?.messages || [];
+  const content = `<div class="perf-wrap"><div class="perf top"></div><div class="paper">
+    <div class="r-head"><div class="r-title">Chat</div><div class="r-meta">scrivi la spesa, la registro io</div></div>
+    <hr class="r-rule">
+    ${msgs.length ? `<div class="chatlista">${msgs.map(bollaHtml).join('')}</div>` : `
+      <div class="empty"><div class="big">Scrivi qui</div>
+      <p>Esempi: "Esselunga 43,20", "sushi 62 ha pagato Ele", "ieri pizza 28,50 offro io". Puoi anche mandare la foto dello scontrino.</p></div>`}
+  </div><div class="perf"></div></div>`;
+  return groupFrame('chat', myBalanceLcd('chat'), content, { composer: true });
 }
 
 function saldiView() {
@@ -891,7 +1032,7 @@ function sheetHtml() {
       <div class="key-row">
         <button class="key key--red" data-act="close-sheet">Annulla</button>
         ${sh.mode === 'budget' ? `<button class="key key--yellow" data-act="budget-zero">Azzera</button>` : ''}
-        <button class="key key--green" data-act="${sh.mode === 'budget' ? 'budget-save' : 'pad-next'}" ${d.amount ? '' : 'disabled'}>Conferma</button>
+        <button class="key key--green" data-act="${sh.mode === 'budget' ? 'budget-save' : sh.mode === 'chat' ? 'chat-importo-ok' : 'pad-next'}" ${d.amount ? '' : 'disabled'}>Conferma</button>
       </div>`);
   }
 
@@ -1087,7 +1228,7 @@ function render() {
   else if (a === 'gruppo') {
     if (!S.data) html = loadingGroupView(b || 'scontrino');
     else if (!myId() && members().length) html = whoAmIView();
-    else html = { undefined: receiptView, saldi: saldiView, buste: busteView, stats: statsView, altro: altroView }[b]?.() || receiptView();
+    else html = { undefined: receiptView, chat: chatView, saldi: saldiView, buste: busteView, stats: statsView, altro: altroView }[b]?.() || receiptView();
   } else html = homeView();
   $app.innerHTML = html;
   const sheetEl = document.querySelector('.sheet-panel');
@@ -1148,6 +1289,47 @@ const ACTS = {
   'go-home': () => nav('#/'),
   'go-new': () => nav('#/new'),
   'open-group': el => { setCurrent(el.dataset.id); nav('#/gruppo'); },
+  'chat-foto': () => document.getElementById('chatfile')?.click(),
+  'prop-apri': el => {
+    const { id, campo } = el.dataset;
+    S.chatApri = (S.chatApri?.id === id && S.chatApri.campo === campo) ? null : { id, campo };
+    render();
+  },
+  'prop-set-cat': el => { S.chatApri = null; aggiornaProposta(el.dataset.id, { bozza: { catId: el.dataset.v } }); },
+  'prop-set-chi': el => { S.chatApri = null; aggiornaProposta(el.dataset.id, { bozza: { paidBy: el.dataset.v } }); },
+  'prop-set-quote': el => {
+    S.chatApri = null;
+    const v = el.dataset.v;
+    aggiornaProposta(el.dataset.id, { bozza: { quote: v === 'tutti' ? members().map(m => m.id) : [v] } });
+  },
+  'prop-importo': el => {
+    const m = (S.data?.messages || []).find(x => x.id === el.dataset.id);
+    S.sheet = { type: 'pad', mode: 'chat', msgId: el.dataset.id, draft: { amount: m?.bozza?.amount || 0, fresh: true } };
+    render();
+  },
+  'chat-importo-ok': async () => {
+    const { msgId, draft } = S.sheet;
+    S.sheet = null;
+    await aggiornaProposta(msgId, { bozza: { amount: draft.amount } });
+  },
+  'prop-no': el => aggiornaProposta(el.dataset.id, { stato: 'annullata' }),
+  'prop-ok': async el => {
+    const m = (S.data?.messages || []).find(x => x.id === el.dataset.id);
+    const b = m?.bozza;
+    if (!b?.amount) return;
+    try {
+      const shares = computeShares(b.amount, b.quote.length ? b.quote : members().map(x => x.id));
+      const spesa = {
+        id: db.uid(), desc: b.desc || cat(b.catId).name, amount: b.amount, paidBy: b.paidBy,
+        shares, catId: b.catId || 'altro', date: b.date, isTransfer: false,
+        chatId: b.chatId || '', createdAt: Date.now(),
+      };
+      await db.saveExpense(S.gid, spesa);
+      await aggiornaProposta(m.id, { stato: 'fatta', text: 'Registrata.' });
+      const battuta = battutaSpesa(spesa, expenses().filter(e => e.id !== spesa.id));
+      toast(battuta || 'Spesa registrata sullo scontrino', battuta ? 5000 : 2600);
+    } catch (e) { toast(e.message); }
+  },
   'prom-on': () => attivaPromemoria(),
   'prom-off': () => disattivaPromemoria(),
   'close-sheet': () => { S.sheet = null; render(); },
@@ -1408,6 +1590,15 @@ const SUBMITS = {
       nav('#/gruppo');
     } catch (e) { toast(e.message); }
   },
+  'chat-invia': async () => {
+    const inp = document.getElementById('chatinput');
+    const testo = inp.value.trim();
+    if (!testo) return;
+    inp.value = '';
+    try {
+      await db.sendMessage(S.gid, { id: db.uid(), from: myId(), text: testo, createdAt: Date.now() });
+    } catch (e) { toast(e.message); }
+  },
   'rename-group': async () => {
     const name = document.getElementById('gnewname').value.trim();
     if (!name) return;
@@ -1443,6 +1634,18 @@ document.addEventListener('submit', e => {
   e.preventDefault();
   SUBMITS[form.dataset.actSubmit]?.();
 });
+document.addEventListener('change', async e => {
+  if (e.target.id !== 'chatfile') return;
+  const file = e.target.files?.[0];
+  e.target.value = '';
+  if (!file) return;
+  try {
+    toast('Preparo la foto…', 1500);
+    const photo = await comprimiFoto(file);
+    await db.sendMessage(S.gid, { id: db.uid(), from: myId(), photo, createdAt: Date.now() });
+  } catch (err) { toast(err.message); }
+});
+
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && S.sheet) { S.sheet = null; render(); }
 });

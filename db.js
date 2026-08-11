@@ -68,7 +68,7 @@ export async function createGroup({ name, members, categories, cloud, ownerKey }
     const f = await firestore();
     await f.setDoc(f.doc(f.db, 'groups', id), meta);
   } else {
-    localWrite(id, { meta, expenses: [] });
+    localWrite(id, { meta, expenses: [], messages: [] });
   }
   rememberGroup({ id, name, cloud });
   return id;
@@ -92,11 +92,11 @@ export function subscribe(id, cb) {
     if (!localSubs.has(id)) localSubs.set(id, new Set());
     localSubs.get(id).add(cb);
     const d = localRead(id);
-    if (d) queueMicrotask(() => cb(structuredClone(d)));
+    if (d) queueMicrotask(() => cb(structuredClone({ messages: [], ...d })));
     return () => localSubs.get(id).delete(cb);
   }
-  let meta = null, expenses = null, pending = false, dead = false;
-  const emit = () => { if (!dead && meta && expenses) cb({ meta, expenses, pending }); };
+  let meta = null, expenses = null, messages = [], pending = false, dead = false;
+  const emit = () => { if (!dead && meta && expenses) cb({ meta, expenses, messages, pending }); };
   let unsubs = [];
   firestore().then(f => {
     if (dead) return;
@@ -111,9 +111,37 @@ export function subscribe(id, cb) {
           emit();
         },
       ),
+      // chat: solo gli ultimi messaggi, per non scaricare mesi di conversazione
+      f.onSnapshot(
+        f.query(f.collection(f.db, 'groups', id, 'messages'), f.orderBy('createdAt', 'desc'), f.limit(60)),
+        s => { messages = s.docs.map(d => ({ id: d.id, ...d.data() })).reverse(); emit(); },
+      ),
     ];
   });
   return () => { dead = true; unsubs.forEach(u => u()); };
+}
+
+export async function sendMessage(gid, msg) {
+  const { id, ...data } = msg;
+  if (isLocal(gid)) {
+    const d = localRead(gid);
+    d.messages = [...(d.messages || []), { id, ...data }].slice(-60);
+    localWrite(gid, d);
+    return;
+  }
+  const f = await firestore();
+  f.setDoc(f.doc(f.db, 'groups', gid, 'messages', id), data); // niente await: offline-first
+}
+
+export async function deleteMessage(gid, id) {
+  if (isLocal(gid)) {
+    const d = localRead(gid);
+    d.messages = (d.messages || []).filter(m => m.id !== id);
+    localWrite(gid, d);
+    return;
+  }
+  const f = await firestore();
+  f.deleteDoc(f.doc(f.db, 'groups', gid, 'messages', id));
 }
 
 export async function saveExpense(gid, exp) {

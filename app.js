@@ -52,6 +52,7 @@ const DEFAULT_CATS = [
   { id: 'risparmi', name: 'Risparmi', icon: 'piggy' },
   { id: 'altro', name: 'Altro', icon: 'box' },
 ];
+const VERSIONE = 'v2'; // si legge in Altro: serve a capire se un telefono e' aggiornato
 const MCOLORS = ['#2f6bd8', '#c76a10', '#0e9488', '#8a4fc9', '#8a7a1f', '#c94f7c'];
 // Promemoria: si alternano, così non diventano subito rumore di fondo.
 // Li legge anche il service worker (glieli passo nella cache di stato).
@@ -1165,7 +1166,10 @@ function altroView() {
     </form>
     <div class="key-row"><button class="key key--wide key--red" data-act="leave-group">${icon('x', 16)} Esci dal gruppo su questo telefono</button></div>
     <hr class="r-rule">
-    <p class="r-note r-center">Batti v1 · installala dal browser: menu → «Aggiungi a schermata Home»</p>
+    <hr class="r-rule">
+    <span class="f-label">Versione</span>
+    <p class="r-note r-center"><b style="font-size:15px;color:var(--ink)">Batti ${VERSIONE}</b><br>
+    Se sui due telefoni leggi numeri diversi, uno dei due non ha ancora preso l'aggiornamento: chiudi l'app e riaprila.</p>
   </div><div class="perf"></div></div>`;
   return groupFrame('altro', myBalanceLcd('altro'), content);
 }

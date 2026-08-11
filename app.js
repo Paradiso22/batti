@@ -182,6 +182,45 @@ function comprimiFoto(file, latoMax = 1280, qualita = 0.6) {
   });
 }
 
+/* ---------- lettura scontrini (opzionale, chiave sul telefono) ---------- */
+// La chiave Gemini NON sta nel repository: la incolla ogni telefono e resta qui,
+// in memoria locale. Senza chiave l'app funziona uguale, chiede l'importo a mano.
+const CHIAVE_AI = 'batti:gemini';
+const chiaveAI = () => localStorage.getItem(CHIAVE_AI) || '';
+const MODELLI = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+
+const PROMPT_SCONTRINO = `Leggi questo scontrino italiano e rispondi SOLO con JSON valido:
+{"totale": <numero in euro con due decimali, oppure null>, "negozio": "<nome breve, oppure null>", "data": "<AAAA-MM-GG, oppure null>"}
+Il totale e' la cifra finale effettivamente pagata: cerca TOTALE, TOT, TOTALE COMPLESSIVO, IMPORTO PAGATO.
+Non prendere il subtotale, il resto, il contante consegnato, l'IVA o i punti fedelta'.
+Se un dato non e' leggibile metti null.`;
+
+async function leggiScontrino(dataUrl, chiave) {
+  const base64 = dataUrl.split(',')[1];
+  const body = {
+    contents: [{ parts: [{ text: PROMPT_SCONTRINO }, { inline_data: { mime_type: 'image/jpeg', data: base64 } }] }],
+    generationConfig: { responseMimeType: 'application/json', temperature: 0 },
+  };
+  let ultimoErrore = 'nessun modello disponibile';
+  for (const modello of MODELLI) {
+    let r;
+    try {
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modello}:generateContent?key=${encodeURIComponent(chiave)}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      });
+    } catch { throw new Error('Niente rete: leggo lo scontrino un\'altra volta'); }
+    if (r.status === 404) { ultimoErrore = 'modello non disponibile'; continue; } // modello ritirato: provo il prossimo
+    if (r.status === 400 || r.status === 403) throw new Error('Chiave non valida o senza permessi');
+    if (r.status === 429) throw new Error('Limite gratuito raggiunto per ora');
+    if (!r.ok) { ultimoErrore = 'errore ' + r.status; continue; }
+    const j = await r.json();
+    const testo = j.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!testo) throw new Error('Non sono riuscito a leggere lo scontrino');
+    try { return JSON.parse(testo); } catch { throw new Error('Risposta non leggibile'); }
+  }
+  throw new Error(ultimoErrore);
+}
+
 /* ---------- chat: interpretazione ---------- */
 // Ogni telefono elabora SOLO i messaggi scritti da chi lo usa: cosi' la risposta
 // non viene generata due volte quando siete tutti e due online.
@@ -202,8 +241,29 @@ async function elaboraChat(data) {
       date: r.date, desc: r.desc || (r.catId ? cat(r.catId).name : ''),
       chatId: m.photo ? m.id : '',
     };
+
+    // foto + chiave configurata: provo a leggere lo scontrino da solo
+    let letto = null, erroreAI = null;
+    if (m.photo && chiaveAI()) {
+      toast('Leggo lo scontrino…', 4000);
+      try {
+        letto = await leggiScontrino(m.photo, chiaveAI());
+        const cent = letto?.totale != null ? Math.round(Number(letto.totale) * 100) : null;
+        if (Number.isFinite(cent) && cent > 0) bozza.amount = cent;
+        if (letto?.negozio) {
+          bozza.desc = String(letto.negozio).slice(0, 60);
+          // il nome del negozio spesso rivela gia' la categoria
+          const g = interpretaSpesa(bozza.desc, { membri: data.meta.members, ioId: me, oggi: todayISO() });
+          if (!bozza.catId && g.catId) bozza.catId = g.catId;
+        }
+        if (/^\d{4}-\d{2}-\d{2}$/.test(letto?.data || '') && letto.data <= todayISO()) bozza.date = letto.data;
+      } catch (e) { erroreAI = e.message; }
+    }
+
     let testo;
-    if (m.photo && !r.amount) testo = 'Scontrino ricevuto. Quanto hai speso?';
+    if (m.photo && bozza.amount && letto) testo = `Ho letto lo scontrino${letto.negozio ? ` di ${letto.negozio}` : ''}. Controlla e conferma.`;
+    else if (m.photo && erroreAI) testo = `Non sono riuscito a leggerlo (${erroreAI}). Quanto hai speso?`;
+    else if (m.photo && !bozza.amount) testo = 'Scontrino ricevuto. Quanto hai speso?';
     else if (!r.amount && !r.catId) testo = 'Non ho capito bene: dimmi almeno quanto hai speso.';
     else if (!r.amount) testo = 'Quanto hai speso?';
     else if (!r.catId) testo = 'Di che categoria è?';
@@ -973,6 +1033,21 @@ function altroView() {
   </div><div class="perf"></div></div>
 
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
+    <span class="f-label">Lettura automatica degli scontrini</span>
+    ${chiaveAI() ? `
+      <p class="r-note">Attiva su questo telefono: le foto degli scontrini vengono lette e l'importo si compila da solo.</p>
+      <div class="key-row"><button class="key key--wide key--yellow" data-act="ai-off">Rimuovi la chiave da questo telefono</button></div>
+    ` : `
+      <p class="r-note">Con una chiave gratuita di Google AI Studio l'app legge l'importo dalla foto dello scontrino. La chiave resta solo su questo telefono, non finisce nel sito. Va incollata su ogni telefono. Nota: le foto vengono inviate a Google, che sul piano gratuito puo' usarle per migliorare i suoi servizi.</p>
+      <form class="f-row" data-act-submit="ai-on" style="margin-top:10px">
+        <input class="f-input" id="aikey" type="password" autocomplete="off" placeholder="Incolla qui la chiave">
+        <button type="submit" class="key key--sm key--green" style="flex:0 0 auto">Attiva</button>
+      </form>
+      <p class="r-note" style="margin-top:8px">La chiave si crea gratis su aistudio.google.com/apikey</p>
+    `}
+  </div><div class="perf"></div></div>
+
+  <div class="perf-wrap"><div class="perf top"></div><div class="paper">
     <span class="f-label">Promemoria</span>
     ${promemoriaAttivi() ? `
       <p class="r-note">Attivi: dopo ${GIORNI_SILENZIO} giorni senza spese arriva un promemoria (con messaggi che cambiano ogni volta).</p>
@@ -1330,6 +1405,7 @@ const ACTS = {
       toast(battuta || 'Spesa registrata sullo scontrino', battuta ? 5000 : 2600);
     } catch (e) { toast(e.message); }
   },
+  'ai-off': () => { localStorage.removeItem(CHIAVE_AI); toast('Chiave rimossa da questo telefono'); render(); },
   'prom-on': () => attivaPromemoria(),
   'prom-off': () => disattivaPromemoria(),
   'close-sheet': () => { S.sheet = null; render(); },
@@ -1598,6 +1674,14 @@ const SUBMITS = {
     try {
       await db.sendMessage(S.gid, { id: db.uid(), from: myId(), text: testo, createdAt: Date.now() });
     } catch (e) { toast(e.message); }
+  },
+  'ai-on': () => {
+    const v = document.getElementById('aikey').value.trim();
+    if (!v) return;
+    if (!/^AIza[\w-]{20,}$/.test(v)) { toast('Non sembra una chiave di AI Studio (inizia con AIza)'); return; }
+    localStorage.setItem(CHIAVE_AI, v);
+    toast('Lettura scontrini attiva su questo telefono');
+    render();
   },
   'rename-group': async () => {
     const name = document.getElementById('gnewname').value.trim();

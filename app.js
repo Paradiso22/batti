@@ -52,7 +52,7 @@ const DEFAULT_CATS = [
   { id: 'risparmi', name: 'Risparmi', icon: 'piggy' },
   { id: 'altro', name: 'Altro', icon: 'box' },
 ];
-const VERSIONE = 'v4'; // si legge in Altro: serve a capire se un telefono e' aggiornato
+const VERSIONE = 'v5'; // si legge in Altro: serve a capire se un telefono e' aggiornato
 const MCOLORS = ['#2f6bd8', '#c76a10', '#0e9488', '#8a4fc9', '#8a7a1f', '#c94f7c'];
 // Promemoria: si alternano, così non diventano subito rumore di fondo.
 // Li legge anche il service worker (glieli passo nella cache di stato).
@@ -622,6 +622,11 @@ function ensureGroup(gid) {
 }
 
 addEventListener('hashchange', () => { S.sheet = null; route(); });
+// passando da schermo stretto a largo (o viceversa) la disposizione si rifà
+matchMedia('(min-width: 1380px)').addEventListener('change', () => {
+  if (schermoLargo() && S.route[0] === 'gruppo' && S.route[1] === 'chat') { nav('#/gruppo'); return; }
+  render();
+});
 addEventListener('online', () => { S.online = true; render(); });
 addEventListener('offline', () => { S.online = false; render(); });
 
@@ -660,6 +665,8 @@ function route() {
   }
   if (a === 'join' && b && !safeId(b)) { location.replace('#/'); return; }
 
+  // a schermo largo la chat sta gia' aperta a destra: la scheda dedicata non serve
+  if (a === 'gruppo' && b === 'chat' && schermoLargo()) { location.replace('#/gruppo'); return; }
   if (a === 'gruppo' && !b) S.month = monthKey(todayISO()); // lo scontrino torna al mese corrente
   if (a === 'gruppo') {
     const id = getCurrent();
@@ -720,22 +727,44 @@ function navBar(tab) {
   ).join('')}</nav>`;
 }
 
+// Da PC largo la chat resta aperta in una colonna a destra: si vede lo
+// scontrino e la conversazione insieme, senza cambiare schermata.
+const schermoLargo = () => matchMedia('(min-width: 1380px)').matches;
+
+function composerHtml() {
+  return `<form class="composer" data-act-submit="chat-invia">
+    <button type="button" class="comp-btn" data-act="chat-foto" aria-label="Allega foto dello scontrino">${icon('camera', 20)}</button>
+    <input class="comp-input" id="chatinput" autocomplete="off" placeholder="Scrivi o detta la spesa" maxlength="200">
+    <button type="button" class="comp-btn comp-btn--mic" data-act="chat-detta" aria-label="Detta la spesa a voce">${icon('mic', 20)}</button>
+    <button type="submit" class="comp-btn comp-btn--send" aria-label="Invia">${icon('send', 20)}</button>
+    <input type="file" id="chatfile" accept="image/*" capture="environment" hidden>
+  </form>`;
+}
+
+function chatListaHtml() {
+  const msgs = S.data?.messages || [];
+  return msgs.length
+    ? `<div class="chatlista">${msgs.map(bollaHtml).join('')}</div>`
+    : `<div class="empty"><div class="big">Scrivi qui</div>
+       <p>Esempi: "Esselunga 43,20", "sushi 62 ha pagato Ele", "ieri pizza 28,50 offro io". Puoi anche mandare la foto dello scontrino.</p></div>`;
+}
+
 function groupFrame(tab, lcdHtml, content, { fab = false, composer = false } = {}) {
-  return `<div class="terminal"><div class="screen">
+  const chatALato = schermoLargo() && tab !== 'chat' && !!S.data;
+  return `<div class="terminal"><div class="screen${chatALato ? ' con-chat' : ''}">
     ${lcdHtml}
     <div class="paper-scroll">${content}</div>
+    ${chatALato ? `<aside class="chat-lato">
+      <div class="chat-lato-testa">${icon('chat', 16)} Chat</div>
+      <div class="chat-lato-corpo"><div class="paper">${chatListaHtml()}</div></div>
+      ${composerHtml()}
+    </aside>` : ''}
     <div class="dock">
       ${fab ? `<div class="fab-row">
-        <a class="key" href="#/gruppo/chat">${icon('chat', 18)} Chat</a>
+        <a class="key chat-solo-stretto" href="#/gruppo/chat">${icon('chat', 18)} Chat</a>
         <button class="key key--green" data-act="open-pad">${icon('plus', 18)} Batti spesa</button>
       </div>` : ''}
-      ${composer ? `<form class="composer" data-act-submit="chat-invia">
-        <button type="button" class="comp-btn" data-act="chat-foto" aria-label="Allega foto dello scontrino">${icon('camera', 20)}</button>
-        <input class="comp-input" id="chatinput" autocomplete="off" placeholder="Scrivi o detta la spesa" maxlength="200">
-        <button type="button" class="comp-btn comp-btn--mic" data-act="chat-detta" aria-label="Detta la spesa a voce">${icon('mic', 20)}</button>
-        <button type="submit" class="comp-btn comp-btn--send" aria-label="Invia">${icon('send', 20)}</button>
-        <input type="file" id="chatfile" accept="image/*" capture="environment" hidden>
-      </form>` : ''}
+      ${composer ? composerHtml() : ''}
       <div class="dock-inner">${navBar(tab)}</div>
     </div>
   </div>${S.sheet ? sheetHtml() : ''}</div>`;
@@ -946,14 +975,11 @@ function bollaHtml(m) {
 }
 
 function chatView() {
-  const msgs = S.data?.messages || [];
   const content = `<div class="perf-wrap"><div class="perf top"></div><div class="paper">
     <a class="torna" href="#/gruppo">${icon('chevL', 15)} Spese</a>
     <div class="r-head"><div class="r-title">Chat</div><div class="r-meta">scrivi la spesa, la registro io</div></div>
     <hr class="r-rule">
-    ${msgs.length ? `<div class="chatlista">${msgs.map(bollaHtml).join('')}</div>` : `
-      <div class="empty"><div class="big">Scrivi qui</div>
-      <p>Esempi: "Esselunga 43,20", "sushi 62 ha pagato Ele", "ieri pizza 28,50 offro io". Puoi anche mandare la foto dello scontrino.</p></div>`}
+    ${chatListaHtml()}
   </div><div class="perf"></div></div>`;
   return groupFrame('chat', myBalanceLcd('chat'), content, { composer: true });
 }

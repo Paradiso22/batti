@@ -52,7 +52,7 @@ const DEFAULT_CATS = [
   { id: 'risparmi', name: 'Risparmi', icon: 'piggy' },
   { id: 'altro', name: 'Altro', icon: 'box' },
 ];
-const VERSIONE = 'v6'; // si legge in Altro: serve a capire se un telefono e' aggiornato
+const VERSIONE = 'v7'; // si legge in Altro: serve a capire se un telefono e' aggiornato
 const MCOLORS = ['#2f6bd8', '#c76a10', '#0e9488', '#8a4fc9', '#8a7a1f', '#c94f7c'];
 // Promemoria: si alternano, così non diventano subito rumore di fondo.
 // Li legge anche il service worker (glieli passo nella cache di stato).
@@ -1007,7 +1007,14 @@ function chatView() {
 }
 
 /* ---------- cosa manca: la lista che non si riscrive ---------- */
-const lista = () => meta().lista || [];
+const GIORNI_CESTINO = 30;
+const tuttaLista = () => meta().lista || [];
+const scaduto = (it, oggi) => !!it.cancellatoIl && giorniTra(it.cancellatoIl, oggi) >= GIORNI_CESTINO;
+const lista = () => tuttaLista().filter(it => !it.cancellatoIl);
+const cestino = () => { const oggi = todayISO(); return tuttaLista().filter(it => it.cancellatoIl && !scaduto(it, oggi)); };
+// I cancellati da oltre 30 giorni spariscono con la prima scrittura utile:
+// nessuna scrittura in piu' e nessuna corsa fra i due telefoni.
+const senzaScaduti = arr => { const oggi = todayISO(); return arr.filter(it => !scaduto(it, oggi)); };
 
 // Il ritmo detto a parole. Se non l'hai scelto tu, l'ha imparato lui.
 function ritmoTesto(it) {
@@ -1023,7 +1030,8 @@ function rigaManca(it) {
   return `<div class="li">
     <button class="spunta" data-act="lista-preso" data-id="${esc(it.id)}" aria-label="Preso, ${esc(it.nome)}"></button>
     <span>${esc(it.nome)}<div class="sub">${sub}</div></span>
-    <span>
+    <span class="azioni">
+      <button class="iconbtn" data-act="lista-nome" data-id="${esc(it.id)}" aria-label="Correggi il nome, ${esc(it.nome)}">${icon('pencil', 16)}</button>
       <button class="iconbtn" data-act="lista-dopo" data-id="${esc(it.id)}" aria-label="Lo compro più in là, ${esc(it.nome)}">${icon('back', 16)}</button>
       <button class="iconbtn danger" data-act="lista-del" data-id="${esc(it.id)}" aria-label="Togli ${esc(it.nome)}">${icon('trash', 16)}</button>
     </span>
@@ -1039,8 +1047,9 @@ function rigaPreso(it, oggi) {
   return `<div class="li">
     <span class="li-fatto">${icon('check', 16)}</span>
     <button class="li-tap" data-act="lista-rimetti" data-id="${esc(it.id)}">${esc(it.nome)}<div class="sub">${sub}</div></button>
-    <span>
-      <button class="iconbtn" data-act="lista-ritmo" data-id="${esc(it.id)}" aria-label="Cambia ogni quanto serve ${esc(it.nome)}">${icon('pencil', 16)}</button>
+    <span class="azioni">
+      <button class="iconbtn" data-act="lista-nome" data-id="${esc(it.id)}" aria-label="Correggi il nome, ${esc(it.nome)}">${icon('pencil', 16)}</button>
+      <button class="iconbtn" data-act="lista-ritmo" data-id="${esc(it.id)}" aria-label="Cambia ogni quanto serve ${esc(it.nome)}">${icon('gear', 16)}</button>
       <button class="iconbtn danger" data-act="lista-del" data-id="${esc(it.id)}" aria-label="Togli ${esc(it.nome)}">${icon('trash', 16)}</button>
     </span>
   </div>`;
@@ -1051,6 +1060,7 @@ function listaView() {
   const items = lista();
   const manca = items.filter(it => tornaInLista(it, oggi));
   const presi = items.filter(it => !tornaInLista(it, oggi)).sort((a, b) => (b.presoIl || '').localeCompare(a.presoIl || ''));
+  const buttati = cestino().sort((a, b) => b.cancellatoIl.localeCompare(a.cancellatoIl));
   const content = `
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
     <a class="torna" href="#/gruppo">${icon('chevL', 15)} Spese</a>
@@ -1071,7 +1081,24 @@ function listaView() {
     <div class="r-head"><div class="r-title">In dispensa</div><div class="r-meta">tornano da soli · tocca per rimetterli subito</div></div>
     <hr class="r-rule">
     <div class="setlist">${presi.map(it => rigaPreso(it, oggi)).join('')}</div>
-    <p class="r-note">La freccia in lista rimanda un prodotto più in là: non l'hai comprato, lo rivuoi solo più avanti. La matita cambia ogni quanto serve.</p>
+    <p class="r-note">La freccia in lista rimanda un prodotto più in là: non l'hai comprato, lo rivuoi solo più avanti. L'ingranaggio cambia ogni quanto serve, la matita corregge il nome.</p>
+  </div><div class="perf"></div></div>` : ''}
+
+  ${buttati.length ? `<div class="perf-wrap"><div class="perf top"></div><div class="paper">
+    <div class="r-head"><div class="r-title">Cancellati</div><div class="r-meta">spariscono da soli dopo ${GIORNI_CESTINO} giorni</div></div>
+    <hr class="r-rule">
+    <div class="setlist">${buttati.map(it => {
+      const restano = Math.max(0, GIORNI_CESTINO - giorniTra(it.cancellatoIl, oggi));
+      return `<div class="li">
+        <span class="li-fatto" style="color:var(--ink-2)">${icon('trash', 16)}</span>
+        <span>${esc(it.nome)}<div class="sub">${restano === 0 ? 'sparisce al prossimo tocco' : `sparisce fra ${restano} giorn${restano === 1 ? 'o' : 'i'}`}${(it.storico || []).length ? ` · ${it.storico.length} acquisti nello storico` : ''}</div></span>
+        <span class="azioni">
+          <button class="iconbtn" data-act="lista-riprendi" data-id="${esc(it.id)}" aria-label="Riprendi ${esc(it.nome)}">${icon('back', 16)}</button>
+          <button class="iconbtn danger" data-act="lista-del-sempre" data-id="${esc(it.id)}" aria-label="Elimina per sempre ${esc(it.nome)}">${icon('x', 16)}</button>
+        </span>
+      </div>`;
+    }).join('')}</div>
+    <p class="r-note">Riprendendo un prodotto torna con tutto il suo storico. La ✕ lo elimina subito e per sempre.</p>
   </div><div class="perf"></div></div>` : ''}`;
   return groupFrame('lista', myBalanceLcd('lista'), content);
 }
@@ -1686,10 +1713,10 @@ async function saveExpenseFromDraft() {
 // Tutte le modifiche alla lista passano di qui: si scrive il gruppo intero,
 // come per buste e ricorrenti, e la sincronizzazione fa il resto.
 async function cambiaProdotto(id, fn) {
-  try { await db.updateMeta(S.gid, { lista: lista().map(it => it.id === id ? fn(it) : it) }); }
+  try { await db.updateMeta(S.gid, { lista: senzaScaduti(tuttaLista().map(it => it.id === id ? fn(it) : it)) }); }
   catch (e) { toast(e.message); }
 }
-const trovaProdotto = el => lista().find(it => it.id === el.dataset.id);
+const trovaProdotto = el => tuttaLista().find(it => it.id === el.dataset.id);
 
 const ACTS = {
   'go-home': () => nav('#/'),
@@ -1724,11 +1751,37 @@ const ACTS = {
     };
     render();
   },
-  'lista-del': el => {
+  'lista-nome': el => {
     const it = trovaProdotto(el); if (!it) return;
     S.sheet = {
-      type: 'confirm', title: `Togliere ${it.nome} dalla lista?`, yes: 'Togli', danger: true,
-      onYes: () => db.updateMeta(S.gid, { lista: lista().filter(x => x.id !== it.id) }),
+      type: 'prompt', title: `Come si chiama?`, value: it.nome, max: 40,
+      onOk: async v => {
+        const nome = v.slice(0, 40);
+        if (lista().some(x => x.id !== it.id && x.nome.toLowerCase() === nome.toLowerCase())) {
+          return toast(`C'è già un prodotto che si chiama ${nome}.`);
+        }
+        await cambiaProdotto(it.id, x => ({ ...x, nome }));
+      },
+    };
+    render();
+  },
+  // Cancellare non e' mai definitivo al primo colpo: niente conferma da leggere,
+  // il prodotto scivola nei cancellati e da li' si riprende.
+  'lista-del': async el => {
+    const it = trovaProdotto(el); if (!it) return;
+    await cambiaProdotto(it.id, x => ({ ...x, cancellatoIl: todayISO() }));
+    toast(`${it.nome} nei cancellati: hai ${GIORNI_CESTINO} giorni per riprenderlo.`);
+  },
+  'lista-riprendi': async el => {
+    const it = trovaProdotto(el); if (!it) return;
+    await cambiaProdotto(it.id, ({ cancellatoIl, ...x }) => x);
+    toast(`${it.nome} è tornato, con tutto il suo storico.`);
+  },
+  'lista-del-sempre': el => {
+    const it = trovaProdotto(el); if (!it) return;
+    S.sheet = {
+      type: 'confirm', title: `Eliminare ${it.nome} per sempre?`, yes: 'Elimina', danger: true,
+      onYes: () => db.updateMeta(S.gid, { lista: senzaScaduti(tuttaLista().filter(x => x.id !== it.id)) }),
     };
     render();
   },
@@ -2015,16 +2068,18 @@ const SUBMITS = {
     const nome = el.value.trim().slice(0, 40);
     if (!nome) return;
     el.value = '';
-    // se il prodotto lo conosco gia' non lo duplico: lo rimetto in lista.
-    // E' il senso della sezione: scritto una volta, mai piu'.
-    const gia = lista().find(x => x.nome.toLowerCase() === nome.toLowerCase());
+    // se il prodotto lo conosco gia' non lo duplico: lo rimetto in lista, che sia
+    // in dispensa o nei cancellati. E' il senso della sezione: scritto una volta, mai piu'.
+    const gia = tuttaLista().find(x => x.nome.toLowerCase() === nome.toLowerCase());
     if (gia) {
-      await cambiaProdotto(gia.id, x => ({ ...x, manca: true }));
-      toast(`${gia.nome} era in dispensa: rimesso in lista.`);
+      const eraCancellato = !!gia.cancellatoIl;
+      await cambiaProdotto(gia.id, ({ cancellatoIl, ...x }) => ({ ...x, manca: true }));
+      toast(eraCancellato ? `${gia.nome} era fra i cancellati: ripreso con tutto il suo storico.` : `${gia.nome} era in dispensa: rimesso in lista.`);
       return;
     }
     try {
-      await db.updateMeta(S.gid, { lista: [...lista(), { id: db.uid().slice(0, 8), nome, manca: true, presoIl: null, storico: [], sett: null }] });
+      const nuovo = { id: db.uid().slice(0, 8), nome, manca: true, presoIl: null, storico: [], sett: null };
+      await db.updateMeta(S.gid, { lista: [...senzaScaduti(tuttaLista()), nuovo] });
     } catch (e) { toast(e.message); }
   },
   'create-group': async () => {

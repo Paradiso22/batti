@@ -252,6 +252,38 @@ export function fmtCents(cents) {
   return (cents / 100).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+/* ---------- lista della spesa: prodotti che tornano da soli ---------- */
+// Un prodotto e' { id, nome, manca, presoIl, storico: [ISO...], sett }.
+// 'sett' esiste solo se l'hai scelto tu o se hai rimandato l'acquisto:
+// altrimenti il ritmo si impara dalle date in cui l'hai preso davvero.
+const GIORNO = 86400000;
+export const giorniTra = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / GIORNO);
+
+// Mediana degli intervalli fra un acquisto e il successivo, in settimane.
+// Mediana e non media: una volta fuori ritmo non deve spostare tutto.
+// Sotto i due acquisti non c'e' ancora niente da imparare.
+export function cadenzaAppresa(storico = []) {
+  const date = [...storico].sort();
+  if (date.length < 2) return null;
+  const gap = [];
+  for (let i = 1; i < date.length; i++) gap.push(giorniTra(date[i - 1], date[i]));
+  const ultimi = gap.slice(-5).sort((a, b) => a - b);
+  return Math.max(1, Math.round(ultimi[Math.floor(ultimi.length / 2)] / 7));
+}
+
+export const settimaneDi = it => it.sett ?? cadenzaAppresa(it.storico);
+
+// Torna in lista da solo quando e' passato il suo tempo. Senza un ritmo noto
+// non ricompare mai: meglio zitto che sbagliato.
+export function tornaInLista(it, oggi) {
+  if (it.manca) return true;
+  const sett = settimaneDi(it);
+  return !!sett && !!it.presoIl && giorniTra(it.presoIl, oggi) >= sett * 7;
+}
+
+// "Lo compro piu' in la'": l'attesa si allunga di meta', almeno una settimana.
+export const rimanda = sett => Math.min(52, (sett || 4) + Math.max(1, Math.round((sett || 4) / 2)));
+
 // '12,50' / '12.50' / '12' / '1.234,56' → centesimi; null se non valido
 export function parseAmount(str) {
   let s = String(str).trim();

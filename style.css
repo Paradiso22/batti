@@ -248,7 +248,26 @@ a { color: inherit; }
 .dock-inner { border-top: 1px solid rgba(255,255,255,.06); padding-top: 10px; }
 /* i due tasti hanno la stessa identica misura: cambia solo il colore, che dice qual e' l'azione principale */
 .fab-row { display: flex; align-items: stretch; gap: 10px; padding: 0 4px 10px; pointer-events: none; }
-.fab-row .key { flex: 1; pointer-events: auto; font-size: 15px; padding: 15px 18px; border-radius: 14px; text-decoration: none; }
+.fab-row .key { flex: 1; pointer-events: auto; font-size: 14px; padding: 15px 12px; border-radius: 14px; text-decoration: none; white-space: nowrap; }
+/* la chat scende a pallino sopra il tasto verde: resta a portata di pollice senza rubare una fila */
+.fab-chat { display: flex; justify-content: flex-end; padding: 0 6px 8px; pointer-events: none; }
+.chat-tondo {
+  position: relative; pointer-events: auto;
+  display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%;
+  background: linear-gradient(180deg, var(--chassis-3), var(--chassis-2));
+  box-shadow: 0 4px 0 #17191d, 0 6px 12px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.07);
+  color: var(--silk-dim); text-decoration: none;
+  transition: transform 70ms ease-out, box-shadow 70ms ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
+.chat-tondo:active { transform: translateY(2px); box-shadow: 0 2px 0 #17191d, 0 3px 6px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.07); }
+.chat-bollo {
+  position: absolute; top: -2px; right: -2px; min-width: 19px; height: 19px; padding: 0 5px;
+  display: grid; place-items: center; border-radius: 10px;
+  background: #59e07c; color: #10331c;
+  font-family: var(--f-silk); font-size: 10.5px; font-weight: 700; letter-spacing: 0;
+  box-shadow: 0 0 6px rgba(89,224,124,.6);
+}
 .torna { display: inline-flex; align-items: center; gap: 5px; font-family: var(--f-mono); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); text-decoration: none; margin-bottom: 8px; }
 .nav { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .nav-key {
@@ -374,6 +393,7 @@ select.f-input { appearance: none; }
 .brow .amt { font-size: 12.5px; }
 .brow .bl svg { color: var(--ink-2); }
 .brow .bl .pct { color: var(--ink-2); font-size: 11px; margin-left: 6px; }
+.brow .date { font-size: 10px; color: var(--ink-2); margin-top: 5px; letter-spacing: .04em; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0 2px; font-family: var(--f-mono); font-size: 11px; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .legend .cdot { width: 8px; height: 8px; border-radius: 50%; background: var(--mcol); }
@@ -389,6 +409,15 @@ select.f-input { appearance: none; }
 .setlist .li { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px dashed var(--line); font-family: var(--f-mono); font-size: 13px; }
 .setlist .li:last-child { border-bottom: 0; }
 .setlist .li .sub { font-size: 10.5px; color: var(--ink-2); margin-top: 2px; }
+/* lista della spesa: la casella si spunta come su un foglio, la riga si tocca tutta */
+.spunta {
+  width: 24px; height: 24px; border-radius: 6px; padding: 0;
+  border: 1.75px solid var(--ink-2); background: transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+.spunta:active { background: var(--green); border-color: var(--green); box-shadow: inset 0 0 0 3px var(--paper); }
+.li-fatto { color: var(--green); display: grid; place-items: center; }
+.li-tap { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 0; font: inherit; color: inherit; }
 .iconbtn { padding: 8px; border-radius: 8px; color: var(--ink-2); }
 .iconbtn:active { background: rgba(0,0,0,.06); }
 .iconbtn.danger { color: var(--red); }
@@ -512,9 +541,10 @@ select.f-input { appearance: none; }
   .dock-inner { order: 1; border-top: 0; padding-top: 0; }
   .fab-row, .composer { order: 2; margin-top: auto; padding: 0; }
   .fab-row { flex-direction: column; }
+  .fab-chat { order: 2; margin-top: auto; padding: 0 0 10px; justify-content: flex-start; }
+  .fab-chat + .fab-row { order: 3; margin-top: 0; }
   .composer { flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
   .comp-input { flex: 1 0 100%; order: -1; }
-  .chat-solo-stretto { display: none; }   /* a destra la chat e' gia' aperta */
   .nav { grid-template-columns: 1fr; gap: 6px; }
   .nav-key { flex-direction: row; justify-content: flex-start; gap: 12px; padding: 11px 14px; font-size: 12px; letter-spacing: .08em; }
   .nav-key svg { width: 19px; height: 19px; }
@@ -554,8 +584,8 @@ select.f-input { appearance: none; }
   .chat-lato-corpo { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
   .chat-lato-corpo .paper { padding: 14px; min-height: 100%; }
   .chat-lato .composer { padding: 0; }
-  /* la voce Chat sparisce dal menu: la conversazione e' gia' sotto gli occhi */
-  .nav-key[href="#/gruppo/chat"] { display: none; }
+  /* il pallino della chat sparisce solo qui: la conversazione e' gia' sotto gli occhi */
+  .chat-solo-stretto { display: none; }
   .nav { grid-template-rows: none; }
 }
 

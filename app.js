@@ -1,5 +1,5 @@
 // app.js - interfaccia. Stato in S, render a stringhe, eventi delegati con data-act.
-import { computeShares, computeBalances, settlePlan, dueRecurring, monthKey, fmtCents, parseAmount, budgetAt, setBudgetFrom, interpretaSpesa } from './logic.js';
+import { computeShares, computeBalances, settlePlan, dueRecurring, monthKey, fmtCents, parseAmount, budgetAt, setBudgetFrom, interpretaSpesa, settimaneDi, cadenzaAppresa, tornaInLista, rimanda, giorniTra } from './logic.js';
 import * as db from './db.js';
 
 /* ---------- icone: unico set, tratto 1.75 ---------- */
@@ -52,7 +52,7 @@ const DEFAULT_CATS = [
   { id: 'risparmi', name: 'Risparmi', icon: 'piggy' },
   { id: 'altro', name: 'Altro', icon: 'box' },
 ];
-const VERSIONE = 'v5'; // si legge in Altro: serve a capire se un telefono e' aggiornato
+const VERSIONE = 'v6'; // si legge in Altro: serve a capire se un telefono e' aggiornato
 const MCOLORS = ['#2f6bd8', '#c76a10', '#0e9488', '#8a4fc9', '#8a7a1f', '#c94f7c'];
 // Promemoria: si alternano, così non diventano subito rumore di fondo.
 // Li legge anche il service worker (glieli passo nella cache di stato).
@@ -749,8 +749,24 @@ function chatListaHtml() {
        <p>Esempi: "Esselunga 43,20", "sushi 62 ha pagato Ele", "ieri pizza 28,50 offro io". Puoi anche mandare la foto dello scontrino.</p></div>`;
 }
 
+// Messaggi non letti: il pallino della chat li conta come su WhatsApp.
+// Il segno di lettura sta su questo telefono, non nel gruppo: quello che ha
+// letto lui non deve azzerare il pallino dell'altra.
+const LETTO = gid => `batti:letto:${gid}`;
+const ultimoMsg = () => Math.max(0, ...(S.data?.messages || []).map(m => m.createdAt || 0));
+function nonLetti() {
+  const mio = myId();
+  const letto = +(localStorage.getItem(LETTO(S.gid)) || 0);
+  return (S.data?.messages || []).filter(m => m.from !== mio && (m.createdAt || 0) > letto).length;
+}
+function segnaLetto() {
+  const t = ultimoMsg();
+  if (t) localStorage.setItem(LETTO(S.gid), String(t));
+}
+
 function groupFrame(tab, lcdHtml, content, { fab = false, composer = false } = {}) {
   const chatALato = schermoLargo() && tab !== 'chat' && !!S.data;
+  const nl = fab ? nonLetti() : 0;
   return `<div class="terminal"><div class="screen${chatALato ? ' con-chat' : ''}">
     ${lcdHtml}
     <div class="paper-scroll">${content}</div>
@@ -760,8 +776,14 @@ function groupFrame(tab, lcdHtml, content, { fab = false, composer = false } = {
       ${composerHtml()}
     </aside>` : ''}
     <div class="dock">
-      ${fab ? `<div class="fab-row">
-        <a class="key chat-solo-stretto" href="#/gruppo/chat">${icon('chat', 18)} Chat</a>
+      ${fab ? `
+      <div class="fab-chat chat-solo-stretto">
+        <a class="chat-tondo" href="#/gruppo/chat" aria-label="Chat${nl ? `, ${nl} da leggere` : ''}">
+          ${icon('chat', 20)}${nl ? `<span class="chat-bollo">${nl > 9 ? '9+' : nl}</span>` : ''}
+        </a>
+      </div>
+      <div class="fab-row">
+        <a class="key" href="#/gruppo/lista">${icon('cart', 18)} Cosa manca?</a>
         <button class="key key--green" data-act="open-pad">${icon('plus', 18)} Batti spesa</button>
       </div>` : ''}
       ${composer ? composerHtml() : ''}
@@ -984,6 +1006,76 @@ function chatView() {
   return groupFrame('chat', myBalanceLcd('chat'), content, { composer: true });
 }
 
+/* ---------- cosa manca: la lista che non si riscrive ---------- */
+const lista = () => meta().lista || [];
+
+// Il ritmo detto a parole. Se non l'hai scelto tu, l'ha imparato lui.
+function ritmoTesto(it) {
+  const sett = settimaneDi(it);
+  if (!sett) return 'ritmo da imparare';
+  return `ogni ${sett} sett.${it.sett ? ' (tua scelta)' : ''}`;
+}
+
+function rigaManca(it) {
+  const tornato = !it.manca; // e' ricomparso da solo: dico da quanto
+  const sub = tornato ? `dall'ultima volta è passato il suo tempo · ${ritmoTesto(it)}`
+    : it.presoIl ? `ultima volta ${fmtDay(it.presoIl)}` : 'prima volta';
+  return `<div class="li">
+    <button class="spunta" data-act="lista-preso" data-id="${esc(it.id)}" aria-label="Preso, ${esc(it.nome)}"></button>
+    <span>${esc(it.nome)}<div class="sub">${sub}</div></span>
+    <span>
+      <button class="iconbtn" data-act="lista-dopo" data-id="${esc(it.id)}" aria-label="Lo compro più in là, ${esc(it.nome)}">${icon('back', 16)}</button>
+      <button class="iconbtn danger" data-act="lista-del" data-id="${esc(it.id)}" aria-label="Togli ${esc(it.nome)}">${icon('trash', 16)}</button>
+    </span>
+  </div>`;
+}
+
+function rigaPreso(it, oggi) {
+  const sett = settimaneDi(it);
+  const mancano = sett ? Math.max(0, sett * 7 - giorniTra(it.presoIl, oggi)) : null;
+  const sub = mancano === null
+    ? `preso ${fmtDay(it.presoIl)} · ${ritmoTesto(it)}`
+    : `torna fra ${mancano} giorni · ${ritmoTesto(it)}`;
+  return `<div class="li">
+    <span class="li-fatto">${icon('check', 16)}</span>
+    <button class="li-tap" data-act="lista-rimetti" data-id="${esc(it.id)}">${esc(it.nome)}<div class="sub">${sub}</div></button>
+    <span>
+      <button class="iconbtn" data-act="lista-ritmo" data-id="${esc(it.id)}" aria-label="Cambia ogni quanto serve ${esc(it.nome)}">${icon('pencil', 16)}</button>
+      <button class="iconbtn danger" data-act="lista-del" data-id="${esc(it.id)}" aria-label="Togli ${esc(it.nome)}">${icon('trash', 16)}</button>
+    </span>
+  </div>`;
+}
+
+function listaView() {
+  const oggi = todayISO();
+  const items = lista();
+  const manca = items.filter(it => tornaInLista(it, oggi));
+  const presi = items.filter(it => !tornaInLista(it, oggi)).sort((a, b) => (b.presoIl || '').localeCompare(a.presoIl || ''));
+  const content = `
+  <div class="perf-wrap"><div class="perf top"></div><div class="paper">
+    <a class="torna" href="#/gruppo">${icon('chevL', 15)} Spese</a>
+    <div class="r-head"><div class="r-title">Cosa manca</div>
+      <div class="r-meta">${manca.length ? `${manca.length} da prendere` : 'lista in pari'}</div></div>
+    <hr class="r-rule">
+    <form class="f-row" data-act-submit="lista-add">
+      <input class="f-input" id="listainput" maxlength="40" autocomplete="off" list="prodottinoti" placeholder="Cosa serve?">
+      <button type="submit" class="key key--sm key--green" style="flex:0 0 auto">${icon('plus', 15)} Aggiungi</button>
+    </form>
+    <datalist id="prodottinoti">${items.map(it => `<option value="${esc(it.nome)}"></option>`).join('')}</datalist>
+    ${manca.length ? `<div class="setlist">${manca.map(rigaManca).join('')}</div>` : `
+      <div class="empty"><div class="big">✻ Non manca niente ✻</div>
+      <p>Scrivi qui sopra quello che serve. Poi non lo riscrivi più: quando lo prendi lo spunti, e torna da solo quando è ora.</p></div>`}
+  </div><div class="perf"></div></div>
+
+  ${presi.length ? `<div class="perf-wrap"><div class="perf top"></div><div class="paper">
+    <div class="r-head"><div class="r-title">In dispensa</div><div class="r-meta">tornano da soli · tocca per rimetterli subito</div></div>
+    <hr class="r-rule">
+    <div class="setlist">${presi.map(it => rigaPreso(it, oggi)).join('')}</div>
+    <p class="r-note">La freccia in lista rimanda un prodotto più in là: non l'hai comprato, lo rivuoi solo più avanti. La matita cambia ogni quanto serve.</p>
+  </div><div class="perf"></div></div>` : ''}`;
+  return groupFrame('lista', myBalanceLcd('lista'), content);
+}
+
 function saldiView() {
   const ids = members().map(m => m.id);
   const bal = computeBalances(expenses(), ids);
@@ -1063,6 +1155,38 @@ function busteView() {
   return groupFrame('buste', myBalanceLcd('buste'), content);
 }
 
+// Storico della lista: non dipende dal mese scelto, e' il ritmo di sempre.
+// Le date sono quelle in cui avete spuntato il prodotto, non le spese battute.
+// Qui vale solo la cadenza osservata: quella scelta a mano dice quando lo
+// rivuoi in lista, non ogni quanto lo comprate davvero.
+function storicoListaHtml() {
+  const presi = lista().filter(it => (it.storico || []).length).map(it => ({
+    ...it,
+    volte: it.volte ?? it.storico.length,
+    sett: cadenzaAppresa(it.storico),
+  }));
+  if (!presi.length) {
+    return `<div class="perf-wrap"><div class="perf top"></div><div class="paper">
+      <span class="f-label">Ogni quanto ricompriamo</span>
+      <p class="r-note">Ancora niente da mostrare. Spunta i prodotti in <b>Cosa manca?</b>: da lì in poi tengo il conto delle volte e capisco ogni quanto li ricomprate.</p>
+    </div><div class="perf"></div></div>`;
+  }
+  // prima i piu' frequenti; quelli senza ritmo noto in fondo, sono presi una volta sola
+  presi.sort((a, b) => (a.sett || 999) - (b.sett || 999) || b.volte - a.volte);
+  const maxVolte = Math.max(...presi.map(p => p.volte));
+  return `<div class="perf-wrap"><div class="perf top"></div><div class="paper">
+    <span class="f-label">Ogni quanto ricompriamo</span>
+    ${presi.map(p => `<div class="brow">
+      <div class="bl">${icon('cart', 18)}
+        <span>${esc(p.nome)}<span class="pct">${p.sett ? `ogni ${p.sett} sett.` : 'presa una volta'}</span></span>
+        <span class="amt">${p.volte}×</span></div>
+      <div class="rail"><div class="fill" style="width:${Math.round(p.volte / maxVolte * 100)}%"></div></div>
+      <div class="date">${p.storico.slice(-6).reverse().map(d => d.slice(8) + '/' + d.slice(5, 7)).join(' · ')}</div>
+    </div>`).join('')}
+    <p class="r-note r-center" style="margin-top:8px">le date sono quelle in cui avete spuntato il prodotto · barra = quante volte</p>
+  </div><div class="perf"></div></div>`;
+}
+
 function statsView() {
   const exps = expenses().filter(e => !e.isTransfer);
   const inMonth = exps.filter(e => monthKey(e.date) === S.month);
@@ -1127,6 +1251,8 @@ function statsView() {
       }).join('')}</div>
     </div>`).join('') || `<p class="r-note">Ancora niente da confrontare questo mese.</p>`}
   </div><div class="perf"></div></div>
+
+  ${storicoListaHtml()}
 
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
     <span class="f-label">Andamento - ultimi 12 mesi</span>
@@ -1468,6 +1594,15 @@ function render() {
   const focusSel = ae?.dataset?.act
     ? `[data-act="${ae.dataset.act}"]${ae.dataset.d ? `[data-d="${ae.dataset.d}"]` : ''}${ae.dataset.id ? `[data-id="${ae.dataset.id}"]` : ''}${ae.dataset.m ? `[data-m="${ae.dataset.m}"]` : ''}`
     : null;
+  // Quello che stai scrivendo non deve sparire se intanto arriva un aggiornamento
+  // dall'altro telefono: capita davvero, in due sulla stessa lista al supermercato.
+  // selectionStart non esiste su tutti i tipi di campo: se manca, si tiene solo il testo
+  let scritto = null;
+  if (ae?.tagName === 'INPUT' && ae.id && ae.type !== 'file') {
+    let caret = null;
+    try { caret = ae.selectionStart; } catch { /* tipi senza cursore */ }
+    scritto = { id: ae.id, v: ae.value, caret };
+  }
   const hadSheet = !!document.querySelector('.sheet');
   S.sheetWasOpen = hadSheet; // il foglio anima solo alla vera apertura, non a ogni ridisegno
   // il punto in cui stavi guardando non deve saltare in cima a ogni tocco
@@ -1481,13 +1616,23 @@ function render() {
   else if (a === 'gruppo') {
     if (!S.data) html = loadingGroupView(b || 'scontrino');
     else if (!myId() && members().length) html = whoAmIView();
-    else html = { undefined: receiptView, chat: chatView, saldi: saldiView, buste: busteView, stats: statsView, altro: altroView }[b]?.() || receiptView();
+    else html = { undefined: receiptView, chat: chatView, lista: listaView, saldi: saldiView, buste: busteView, stats: statsView, altro: altroView }[b]?.() || receiptView();
   } else html = homeView();
+  // la chat sotto gli occhi e' chat letta: il pallino non deve restare acceso
+  if (a === 'gruppo' && S.data && (b === 'chat' || schermoLargo())) segnaLetto();
   $app.innerHTML = html;
   const sheetEl = document.querySelector('.sheet-panel');
   if (hadSheet && sheetEl && scrollFoglio) sheetEl.scrollTop = scrollFoglio;
   const paginaEl = document.querySelector('.paper-scroll');
   if (stessaSchermata && paginaEl && scrollPagina) paginaEl.scrollTop = scrollPagina;
+  if (scritto) {
+    const campo = document.getElementById(scritto.id);
+    if (campo) {
+      campo.value = scritto.v;
+      campo.focus({ preventScroll: true });
+      if (scritto.caret !== null) try { campo.setSelectionRange(scritto.caret, scritto.caret); } catch { /* tipi senza cursore */ }
+    }
+  }
   // preventScroll: mettere a fuoco non deve trascinare la vista altrove
   if (sheetEl && !hadSheet) sheetEl.focus({ preventScroll: true }); // foglio appena aperto
   else if (focusSel) document.querySelector(focusSel)?.focus({ preventScroll: true });
@@ -1538,8 +1683,55 @@ async function saveExpenseFromDraft() {
   render();
 }
 
+// Tutte le modifiche alla lista passano di qui: si scrive il gruppo intero,
+// come per buste e ricorrenti, e la sincronizzazione fa il resto.
+async function cambiaProdotto(id, fn) {
+  try { await db.updateMeta(S.gid, { lista: lista().map(it => it.id === id ? fn(it) : it) }); }
+  catch (e) { toast(e.message); }
+}
+const trovaProdotto = el => lista().find(it => it.id === el.dataset.id);
+
 const ACTS = {
   'go-home': () => nav('#/'),
+  'lista-preso': async el => {
+    const it = trovaProdotto(el); if (!it) return;
+    const oggi = todayISO();
+    const storico = [...(it.storico || []), oggi].slice(-24); // le date recenti, per il ritmo e lo storico
+    // 'volte' conta anche le date gia' scartate: le statistiche devono restare vere
+    const volte = (it.volte ?? (it.storico || []).length) + 1;
+    await cambiaProdotto(it.id, x => ({ ...x, manca: false, presoIl: oggi, storico, volte }));
+    const sett = settimaneDi({ ...it, storico, presoIl: oggi });
+    toast(sett ? `${it.nome}: torna fra ${sett} settimane.` : `${it.nome} preso. Al prossimo giro capisco il ritmo.`);
+  },
+  'lista-dopo': async el => {
+    const it = trovaProdotto(el); if (!it) return;
+    const sett = rimanda(settimaneDi(it));
+    await cambiaProdotto(it.id, x => ({ ...x, manca: false, presoIl: todayISO(), sett }));
+    toast(`${it.nome}: non ora, lo rivedi fra ${sett} settimane.`);
+  },
+  'lista-rimetti': el => cambiaProdotto(el.dataset.id, x => ({ ...x, manca: true })),
+  'lista-ritmo': el => {
+    const it = trovaProdotto(el); if (!it) return;
+    S.sheet = {
+      type: 'prompt', title: `${it.nome}: ogni quante settimane?`, value: String(settimaneDi(it) || ''), max: 2,
+      ph: '0 = lo impara da solo',
+      onOk: async v => {
+        const n = Math.round(Number(v.replace(',', '.')));
+        if (!Number.isFinite(n)) return toast('Scrivi un numero di settimane.');
+        await cambiaProdotto(it.id, x => ({ ...x, sett: n > 0 ? Math.min(52, n) : null }));
+        toast(n > 0 ? `${it.nome}: ogni ${Math.min(52, n)} settimane.` : `${it.nome}: torno a impararlo da solo.`);
+      },
+    };
+    render();
+  },
+  'lista-del': el => {
+    const it = trovaProdotto(el); if (!it) return;
+    S.sheet = {
+      type: 'confirm', title: `Togliere ${it.nome} dalla lista?`, yes: 'Togli', danger: true,
+      onYes: () => db.updateMeta(S.gid, { lista: lista().filter(x => x.id !== it.id) }),
+    };
+    render();
+  },
   'go-new': () => nav('#/new'),
   'open-group': el => { setCurrent(el.dataset.id); nav('#/gruppo'); },
   'chat-foto': () => document.getElementById('chatfile')?.click(),
@@ -1818,6 +2010,23 @@ const ACTS = {
 };
 
 const SUBMITS = {
+  'lista-add': async () => {
+    const el = document.getElementById('listainput');
+    const nome = el.value.trim().slice(0, 40);
+    if (!nome) return;
+    el.value = '';
+    // se il prodotto lo conosco gia' non lo duplico: lo rimetto in lista.
+    // E' il senso della sezione: scritto una volta, mai piu'.
+    const gia = lista().find(x => x.nome.toLowerCase() === nome.toLowerCase());
+    if (gia) {
+      await cambiaProdotto(gia.id, x => ({ ...x, manca: true }));
+      toast(`${gia.nome} era in dispensa: rimesso in lista.`);
+      return;
+    }
+    try {
+      await db.updateMeta(S.gid, { lista: [...lista(), { id: db.uid().slice(0, 8), nome, manca: true, presoIl: null, storico: [], sett: null }] });
+    } catch (e) { toast(e.message); }
+  },
   'create-group': async () => {
     const name = document.getElementById('gname').value.trim();
     const my = document.getElementById('myname').value.trim();

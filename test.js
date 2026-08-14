@@ -1,5 +1,5 @@
 // test.js - controlli sul motore soldi: node test.js
-import { computeShares, computeBalances, settlePlan, dueRecurring, parseAmount, budgetAt, setBudgetFrom, interpretaSpesa } from './logic.js';
+import { computeShares, computeBalances, settlePlan, dueRecurring, parseAmount, budgetAt, setBudgetFrom, interpretaSpesa, cadenzaAppresa, settimaneDi, tornaInLista, rimanda } from './logic.js';
 import assert from 'node:assert';
 
 const ids = ['a', 'b', 'c'];
@@ -147,5 +147,32 @@ assert.equal(leggi('serata caraibica 30').catId, 'svago');
 assert.equal(leggi('bolletta luce 90').catId, 'bollette');
 assert.equal(leggi('messo da parte 200').catId, 'risparmi');
 assert.equal(leggi('treno 18,90').catId, 'trasporti');
+
+// lista della spesa: il ritmo si impara dalle date, non si chiede
+assert.equal(cadenzaAppresa([]), null);
+assert.equal(cadenzaAppresa(['2026-08-01']), null);          // un solo acquisto: niente da imparare
+assert.equal(cadenzaAppresa(['2026-08-01', '2026-08-29']), 4); // 28 giorni = 4 settimane
+// una volta fuori ritmo non sposta la mediana
+assert.equal(cadenzaAppresa(['2026-01-01', '2026-01-29', '2026-02-01', '2026-03-01']), 4);
+// le date disordinate valgono lo stesso
+assert.equal(cadenzaAppresa(['2026-08-29', '2026-08-01']), 4);
+
+const prod = (o = {}) => ({ id: 'p', nome: 'Detersivo', manca: false, presoIl: '2026-08-01', storico: ['2026-07-04', '2026-08-01'], sett: null, ...o });
+assert.equal(settimaneDi(prod()), 4);
+assert.equal(settimaneDi(prod({ sett: 6 })), 6);              // la tua scelta batte quella imparata
+assert.equal(tornaInLista(prod(), '2026-08-20'), false);      // non e' ancora ora
+assert.equal(tornaInLista(prod(), '2026-08-29'), true);       // 28 giorni: torna da solo
+assert.equal(tornaInLista(prod({ manca: true }), '2026-08-02'), true); // gia' in lista, resta
+// senza ritmo noto non ricompare mai da solo
+assert.equal(tornaInLista(prod({ storico: ['2026-08-01'] }), '2027-01-01'), false);
+// "piu' in la'": l'attesa si allunga di meta' e alla lunga si ferma
+assert.equal(rimanda(4), 6);
+assert.equal(rimanda(6), 9);
+assert.equal(rimanda(1), 2);
+assert.equal(rimanda(null), 6);   // senza ritmo noto parte da 4
+assert.equal(rimanda(50), 52);    // tetto a un anno
+// rimandato una volta, non torna piu' al giorno prima
+assert.equal(tornaInLista(prod({ sett: rimanda(4), presoIl: '2026-08-01' }), '2026-08-29'), false);
+assert.equal(tornaInLista(prod({ sett: rimanda(4), presoIl: '2026-08-01' }), '2026-09-12'), true);
 
 console.log('OK - tutti i controlli passano');

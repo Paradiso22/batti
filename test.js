@@ -1,5 +1,5 @@
 // test.js - controlli sul motore soldi: node test.js
-import { computeShares, computeBalances, settlePlan, dueRecurring, parseAmount, budgetAt, setBudgetFrom, interpretaSpesa, cadenzaAppresa, settimaneDi, tornaInLista, rimanda } from './logic.js';
+import { computeShares, computeBalances, settlePlan, dueRecurring, parseAmount, budgetAt, setBudgetFrom, interpretaSpesa, cadenzaAppresa, settimaneDi, tornaInLista, rimanda, DEFAULT_CATS } from './logic.js';
 import assert from 'node:assert';
 
 const ids = ['a', 'b', 'c'];
@@ -182,5 +182,51 @@ assert.equal(rimanda(50), 52);    // tetto a un anno
 // rimandato una volta, non torna piu' al giorno prima
 assert.equal(tornaInLista(prod({ sett: rimanda(4), presoIl: '2026-08-01' }), '2026-08-29'), false);
 assert.equal(tornaInLista(prod({ sett: rimanda(4), presoIl: '2026-08-01' }), '2026-09-12'), true);
+
+// Accoppiamento con l'app Gestione Soldi: le sue categorie e la sua mapCategory
+// (js/batti.js), copiate qui. Se qualcuno rinomina una categoria di Batti e
+// l'import automatico finirebbe nel posto sbagliato, questo blocco fallisce.
+const SOLDI = [
+  ['abbonamenti', 'Abbonamenti'], ['affitto', 'Affitto'], ['carburante', 'Carburante'],
+  ['collaboratori', 'Collaboratori esterni'], ['extra', 'Extra'], ['fatture', 'Fatture'],
+  ['pasti', 'Pasti fuori o domicilio'], ['regali', 'Regali'], ['sanita', 'Sanità'],
+  ['shopping', 'Shopping'], ['spesa-casa', 'Spesa Casa'], ['tasse', 'Tasse e Contributi'],
+  ['viaggi', 'Viaggi'], ['utenze', 'Utenze'], ['rettifiche', 'Rettifiche'],
+];
+const normSoldi = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+function mapCategory(battiName) {
+  if (!battiName) return null;
+  const bn = normSoldi(battiName);
+  const bw = bn.split(/\W+/).filter(w => w.length > 3);
+  let best = null, bestScore = 0;
+  for (const [id, name] of SOLDI) {
+    const cn = normSoldi(name);
+    if (cn === bn) return id;
+    let score = 0;
+    bw.forEach((w, i) => { if (cn.includes(w)) score += i === 0 ? 2 : 1; });
+    cn.split(/\W+/).forEach(w => { if (w.length > 3 && bn.includes(w)) score += 1; });
+    if (score > bestScore) { bestScore = score; best = id; }
+  }
+  return best;
+}
+// dove deve finire ogni categoria di Batti una volta importata in Soldi
+const ACCOPPIAMENTO = {
+  spesa: 'spesa-casa', casa: 'affitto', bollette: 'utenze', fuori: 'pasti',
+  shopping: 'shopping', trasporti: 'carburante', abbonamenti: 'abbonamenti',
+  salute: 'sanita', regali: 'regali', viaggi: 'viaggi', altro: 'extra',
+  risparmi: null, // in Gestione Soldi non c'e': l'import ripiega sulla descrizione
+};
+for (const c of DEFAULT_CATS) {
+  assert.ok(c.id in ACCOPPIAMENTO, `categoria senza accoppiamento noto: ${c.id}`);
+  assert.equal(mapCategory(c.name), ACCOPPIAMENTO[c.id],
+    `"${c.name}" (${c.id}) verrebbe importata in Soldi come ${mapCategory(c.name)}`);
+}
+assert.equal(DEFAULT_CATS.length, Object.keys(ACCOPPIAMENTO).length);
+// i nomi corti che NON reggono: restano per esteso apposta, non per svista
+assert.notEqual(mapCategory('Casa'), 'affitto');   // finirebbe su Spesa Casa
+assert.equal(mapCategory('Bollette'), null);
+assert.equal(mapCategory('Trasporti'), null);
+assert.equal(mapCategory('Salute'), null);
+assert.equal(mapCategory('Altro'), null);
 
 console.log('OK - tutti i controlli passano');

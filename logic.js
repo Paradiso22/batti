@@ -127,6 +127,31 @@ export function setBudgetFrom(b, month, amount) {
   return list.sort((x, y) => (x.from < y.from ? -1 : 1));
 }
 
+// Categorie appaiate a quelle dell'app Gestione Soldi, che importa le spese
+// pagate da te e cerca la categoria per NOME (js/batti.js, mapCategory):
+// prima il nome identico, poi le parole in comune. Si puo' quindi accorciare
+// solo dove la parola corta e' contenuta nel nome lungo e in nessun altro:
+// 'Spesa' -> Spesa Casa e 'Fuori' -> Pasti fuori o domicilio reggono, mentre
+// 'Bollette', 'Trasporti', 'Salute' e 'Altro' non troverebbero nulla e 'Casa'
+// finirebbe per sbaglio su Spesa Casa. Quelli restano per esteso.
+// Gli id non cambiano mai: spese, buste e ricorrenti gia' registrate non si
+// riscrivono, cambia solo come si leggono.
+// L'accoppiamento e' verificato da test.js: rinominarne una lo fa fallire.
+export const DEFAULT_CATS = [
+  { id: 'spesa', name: 'Spesa', icon: 'cart' },              // -> Spesa Casa
+  { id: 'casa', name: 'Affitto', icon: 'home' },
+  { id: 'bollette', name: 'Utenze', icon: 'bolt' },
+  { id: 'fuori', name: 'Fuori', icon: 'food' },              // -> Pasti fuori o domicilio
+  { id: 'shopping', name: 'Shopping', icon: 'bag' },
+  { id: 'trasporti', name: 'Carburante', icon: 'fuel' },
+  { id: 'abbonamenti', name: 'Abbonamenti', icon: 'calendar' },
+  { id: 'salute', name: 'Sanità', icon: 'health' },
+  { id: 'regali', name: 'Regali', icon: 'gift' },
+  { id: 'viaggi', name: 'Viaggi', icon: 'travel' },
+  { id: 'risparmi', name: 'Risparmi', icon: 'piggy' },       // in Gestione Soldi non esiste
+  { id: 'altro', name: 'Extra', icon: 'wallet' },
+];
+
 // Parole che fanno indovinare la categoria da una frase scritta a mano.
 // Gli id restano quelli di sempre: cambiano i nomi mostrati, non i dati salvati.
 // L'ordine conta, vince la prima categoria che trova una parola: 'regali' prima

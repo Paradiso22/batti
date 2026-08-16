@@ -1,5 +1,5 @@
 // app.js - interfaccia. Stato in S, render a stringhe, eventi delegati con data-act.
-import { computeShares, computeBalances, settlePlan, dueRecurring, monthKey, fmtCents, parseAmount, budgetAt, setBudgetFrom, interpretaSpesa, settimaneDi, cadenzaAppresa, tornaInLista, rimanda, giorniTra } from './logic.js';
+import { computeShares, computeBalances, settlePlan, dueRecurring, monthKey, fmtCents, parseAmount, budgetAt, setBudgetFrom, interpretaSpesa, settimaneDi, cadenzaAppresa, tornaInLista, rimanda, giorniTra, DEFAULT_CATS } from './logic.js';
 import * as db from './db.js';
 
 /* ---------- icone: unico set, tratto 1.75 ---------- */
@@ -42,26 +42,8 @@ const PATHS = {
 };
 const icon = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${PATHS[n]}"/></svg>`;
 
-// Stessi nomi delle categorie dell'app Gestione Soldi: l'import automatico
-// delle spese la' cerca la categoria per nome, e con i nomi uguali smette di
-// indovinarla. Gli id invece restano quelli di sempre, cosi' spese, buste e
-// ricorrenti gia' registrate non vanno riscritte: cambia solo come si leggono.
 const CAT_SPARITA = 'svago'; // in Gestione Soldi non c'e': le sue voci passano a Extra
-const DEFAULT_CATS = [
-  { id: 'spesa', name: 'Spesa Casa', icon: 'cart' },
-  { id: 'casa', name: 'Affitto', icon: 'home' },
-  { id: 'bollette', name: 'Utenze', icon: 'bolt' },
-  { id: 'fuori', name: 'Pasti fuori o domicilio', icon: 'food' },
-  { id: 'shopping', name: 'Shopping', icon: 'bag' },
-  { id: 'trasporti', name: 'Carburante', icon: 'fuel' },
-  { id: 'abbonamenti', name: 'Abbonamenti', icon: 'calendar' },
-  { id: 'salute', name: 'Sanità', icon: 'health' },
-  { id: 'regali', name: 'Regali', icon: 'gift' },
-  { id: 'viaggi', name: 'Viaggi', icon: 'travel' },
-  { id: 'risparmi', name: 'Risparmi', icon: 'piggy' },
-  { id: 'altro', name: 'Extra', icon: 'wallet' },
-];
-const VERSIONE = 'v9'; // si legge in Altro: serve a capire se un telefono e' aggiornato
+const VERSIONE = 'v10'; // si legge in Altro: serve a capire se un telefono e' aggiornato
 const MCOLORS = ['#2f6bd8', '#c76a10', '#0e9488', '#8a4fc9', '#8a7a1f', '#c94f7c'];
 // Promemoria: si alternano, così non diventano subito rumore di fondo.
 // Li legge anche il service worker (glieli passo nella cache di stato).

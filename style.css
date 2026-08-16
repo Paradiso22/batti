@@ -340,7 +340,9 @@ select.f-input { appearance: none; }
 .chip[aria-pressed="true"]::after { color: var(--mcol, var(--green)); }
 .chip:disabled { opacity: .4; }
 
-.catgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+/* le colonne si contano da sole: con i nomi lunghi (Pasti fuori o domicilio,
+   Abbonamenti) quattro in fila spezzavano le parole a meta' */
+.catgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
 .catbtn {
   display: flex; flex-direction: column; align-items: center; gap: 5px;
   min-width: 0;
@@ -348,7 +350,7 @@ select.f-input { appearance: none; }
   font-family: var(--f-mono); font-size: 9px; font-weight: 500; letter-spacing: .02em; text-transform: uppercase;
   color: var(--ink-2); background: rgba(255,255,255,.35);
 }
-.catbtn span { line-height: 1.2; text-align: center; overflow-wrap: anywhere; }
+.catbtn span { line-height: 1.2; text-align: center; overflow-wrap: break-word; }
 .catbtn[aria-pressed="true"] { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); color: var(--ink); background: #fff; }
 .catbtn[aria-pressed="true"] svg { color: var(--green); }
 .catbtn svg { color: var(--ink-2); }

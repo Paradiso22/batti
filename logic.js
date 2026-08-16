@@ -128,17 +128,24 @@ export function setBudgetFrom(b, month, amount) {
 }
 
 // Parole che fanno indovinare la categoria da una frase scritta a mano.
+// Gli id restano quelli di sempre: cambiano i nomi mostrati, non i dati salvati.
+// L'ordine conta, vince la prima categoria che trova una parola: 'regali' prima
+// di 'shopping' e 'abbonamenti' prima di 'bollette', o "regalo" e "netflix"
+// finirebbero nel posto sbagliato.
 export const PAROLE_CATEGORIA = {
   spesa: ['spesa', 'supermercato', 'esselunga', 'lidl', 'coop', 'conad', 'carrefour', 'eurospin', 'penny', 'md', 'bennet', 'pam', 'despar', 'ipercoop', 'discount'],
   casa: ['casa', 'affitto', 'ikea', 'mutuo', 'condominio', 'detersivi', 'ferramenta', 'mobili', 'lampadine'],
-  bollette: ['bolletta', 'bollette', 'luce', 'gas', 'acqua', 'internet', 'wifi', 'telefono', 'enel', 'tim', 'vodafone', 'fastweb', 'iliad', 'netflix', 'spotify', 'abbonamento'],
+  abbonamenti: ['abbonamento', 'abbonamenti', 'netflix', 'spotify', 'disney', 'dazn', 'canone', 'rinnovo'],
+  bollette: ['bolletta', 'bollette', 'luce', 'gas', 'acqua', 'internet', 'wifi', 'telefono', 'enel', 'tim', 'vodafone', 'fastweb', 'iliad', 'utenza', 'utenze'],
   fuori: ['sushi', 'pizza', 'pizzeria', 'ristorante', 'cena', 'pranzo', 'bar', 'aperitivo', 'trattoria', 'osteria', 'hamburger', 'kebab', 'asporto', 'domicilio', 'glovo', 'deliveroo', 'justeat', 'poke', 'gelato', 'colazione', 'brunch'],
-  shopping: ['zara', 'vestiti', 'scarpe', 'amazon', 'shopping', 'maglietta', 'pantaloni', 'giacca', 'borsa', 'profumo', 'regalo', 'h&m', 'decathlon'],
+  regali: ['regalo', 'regali', 'compleanno', 'anniversario', 'bomboniera'],
+  shopping: ['zara', 'vestiti', 'scarpe', 'amazon', 'shopping', 'maglietta', 'pantaloni', 'giacca', 'borsa', 'profumo', 'h&m', 'decathlon'],
   trasporti: ['benzina', 'gasolio', 'diesel', 'carburante', 'treno', 'taxi', 'metro', 'metropolitana', 'autobus', 'bus', 'pedaggio', 'autostrada', 'parcheggio', 'aereo', 'volo', 'uber', 'bolt', 'revisione', 'gomme'],
-  svago: ['cinema', 'concerto', 'discoteca', 'ballo', 'salsa', 'bachata', 'kizomba', 'caraibica', 'serata', 'teatro', 'museo', 'palestra', 'libro', 'videogioco', 'festa'],
   salute: ['farmacia', 'medico', 'dentista', 'visita', 'medicine', 'analisi', 'ottico', 'occhiali', 'fisioterapia'],
   viaggi: ['hotel', 'albergo', 'viaggio', 'vacanza', 'bnb', 'airbnb', 'ostello', 'campeggio', 'escursione'],
   risparmi: ['risparmi', 'risparmio', 'messo da parte', 'salvadanaio', 'accantonato'],
+  // 'Svago' non esiste in Gestione Soldi: cinema, ballo e serate finiscono in Extra
+  altro: ['cinema', 'concerto', 'discoteca', 'ballo', 'salsa', 'bachata', 'kizomba', 'caraibica', 'serata', 'teatro', 'museo', 'palestra', 'libro', 'videogioco', 'festa'],
 };
 
 const senzaAccenti = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();

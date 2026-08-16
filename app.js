@@ -36,23 +36,32 @@ const PATHS = {
   camera: 'M4 8.5A1.5 1.5 0 0 1 5.5 7h2L9 5h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5v-9Zm8 8.2a3.7 3.7 0 1 0 0-7.4 3.7 3.7 0 0 0 0 7.4Z',
   mic: 'M12 3.5a2.6 2.6 0 0 1 2.6 2.6v5.4a2.6 2.6 0 0 1-5.2 0V6.1A2.6 2.6 0 0 1 12 3.5ZM6.5 11a5.5 5.5 0 0 0 11 0M12 16.5V20M9 20h6',
   send: 'M4 11.5 20 4l-7.5 16-2-6.5-6.5-2Z',
+  calendar: 'M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-11ZM4 10.5h16M8.5 3.5v4M15.5 3.5v4',
+  fuel: 'M5.5 20.5V6A1.5 1.5 0 0 1 7 4.5h5A1.5 1.5 0 0 1 13.5 6v14.5M3.5 20.5h12M8 8h4v3.5H8zM13.5 10h3a1 1 0 0 1 1 1v4.2a1.6 1.6 0 0 0 3.2 0V9.5l-2.2-2.2',
+  gift: 'M4.5 11.5h15v8a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-8ZM3.5 8.5h17v3h-17v-3ZM12 8.5v12M12 8.5S10.8 4 8.7 4a2.2 2.2 0 0 0 0 4.5H12Zm0 0s1.2-4.5 3.3-4.5a2.2 2.2 0 0 1 0 4.5H12Z',
 };
 const icon = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${PATHS[n]}"/></svg>`;
 
+// Stessi nomi delle categorie dell'app Gestione Soldi: l'import automatico
+// delle spese la' cerca la categoria per nome, e con i nomi uguali smette di
+// indovinarla. Gli id invece restano quelli di sempre, cosi' spese, buste e
+// ricorrenti gia' registrate non vanno riscritte: cambia solo come si leggono.
+const CAT_SPARITA = 'svago'; // in Gestione Soldi non c'e': le sue voci passano a Extra
 const DEFAULT_CATS = [
-  { id: 'spesa', name: 'Spesa', icon: 'cart' },
-  { id: 'casa', name: 'Casa', icon: 'home' },
-  { id: 'bollette', name: 'Bollette', icon: 'bolt' },
-  { id: 'fuori', name: 'Fuori', icon: 'food' },
+  { id: 'spesa', name: 'Spesa Casa', icon: 'cart' },
+  { id: 'casa', name: 'Affitto', icon: 'home' },
+  { id: 'bollette', name: 'Utenze', icon: 'bolt' },
+  { id: 'fuori', name: 'Pasti fuori o domicilio', icon: 'food' },
   { id: 'shopping', name: 'Shopping', icon: 'bag' },
-  { id: 'trasporti', name: 'Trasporti', icon: 'car' },
-  { id: 'svago', name: 'Svago', icon: 'fun' },
-  { id: 'salute', name: 'Salute', icon: 'health' },
+  { id: 'trasporti', name: 'Carburante', icon: 'fuel' },
+  { id: 'abbonamenti', name: 'Abbonamenti', icon: 'calendar' },
+  { id: 'salute', name: 'Sanità', icon: 'health' },
+  { id: 'regali', name: 'Regali', icon: 'gift' },
   { id: 'viaggi', name: 'Viaggi', icon: 'travel' },
   { id: 'risparmi', name: 'Risparmi', icon: 'piggy' },
-  { id: 'altro', name: 'Altro', icon: 'box' },
+  { id: 'altro', name: 'Extra', icon: 'wallet' },
 ];
-const VERSIONE = 'v8'; // si legge in Altro: serve a capire se un telefono e' aggiornato
+const VERSIONE = 'v9'; // si legge in Altro: serve a capire se un telefono e' aggiornato
 const MCOLORS = ['#2f6bd8', '#c76a10', '#0e9488', '#8a4fc9', '#8a7a1f', '#c94f7c'];
 // Promemoria: si alternano, così non diventano subito rumore di fondo.
 // Li legge anche il service worker (glieli passo nella cache di stato).
@@ -555,7 +564,7 @@ function seedDemo() {
       E('d2', 'Pizza da Michele', 5400, anna, [gio, anna, marco], 'fuori', `${mk}-03`),
       E('d3', 'Benzina', 6000, marco, [gio, marco], 'trasporti', `${mk}-04`),
       E('d4', 'Bolletta luce', 9820, gio, [gio, anna], 'bollette', `${mk}-05`),
-      E('d5', 'Cinema', 2400, anna, [gio, anna], 'svago', `${mk}-06`),
+      E('d5', 'Cinema', 2400, anna, [gio, anna], 'altro', `${mk}-06`),
       E('d6', 'Farmacia', 1830, gio, [gio], 'salute', `${mk}-06`),
       E('d7', 'Spesa Lidl', 4620, anna, [gio, anna], 'spesa', `${mk}-07`),
       E('d9', 'Zara', 3999, anna, [anna], 'shopping', `${mk}-07`),
@@ -568,7 +577,7 @@ function seedDemo() {
     ];
     const meta = {
       name: 'Casa Demo', members: ms, categories: DEFAULT_CATS,
-      budgets: { spesa: 40000, fuori: 15000, svago: 8000, bollette: 25000 },
+      budgets: { spesa: 40000, fuori: 15000, altro: 8000, bollette: 25000 },
       recurring: [{ id: 'demo-rec', desc: 'Affitto', amount: 78000, paidBy: gio, shares: computeShares(78000, [gio, anna]), catId: 'casa', dayOfMonth: 1, startMonth: prev }],
       createdAt: Date.now(),
     };
@@ -583,22 +592,52 @@ function ensureGroup(gid) {
   S.unsub?.();
   S.gid = gid; S.data = null; S.loadErr = null;
   const materialized = new Set();
+  const svagoSpostate = new Set();
   let catsAggiornate = false;
   S.unsub = db.subscribe(gid, data => {
     S.data = data;
     db.rememberGroup({ id: gid, name: data.meta.name, cloud: !gid.startsWith('local-') });
-    // categorie aggiunte all'app dopo la creazione del gruppo: le accodo una volta,
-    // senza toccare quelle esistenti
+    // Allineamento delle categorie al set corrente: le nuove entrano al loro
+    // posto, quelle gia' presenti prendono nome e icona aggiornati (l'id resta,
+    // quindi nessuna spesa va riscritta). 'Svago' invece sparisce: le sue voci
+    // passano a Extra, che e' l'id 'altro' e quindi resta dov'era.
     if (!catsAggiornate) {
       const attuali = data.meta.categories || [];
-      const presenti = new Set(attuali.map(c => c.id));
-      const ordine = DEFAULT_CATS.map(c => c.id); // le nuove entrano al loro posto, non in coda
+      const perId = new Map(DEFAULT_CATS.map(c => [c.id, c]));
+      const ordine = DEFAULT_CATS.map(c => c.id);
       const pos = c => { const i = ordine.indexOf(c.id); return i < 0 ? 999 : i; };
-      const categories = [...attuali, ...DEFAULT_CATS.filter(c => !presenti.has(c.id))]
-        .sort((a, b) => pos(a) - pos(b));
-      if (categories.map(c => c.id).join() !== attuali.map(c => c.id).join()) {
+      const categories = [
+        ...attuali.filter(c => c.id !== CAT_SPARITA).map(c => perId.get(c.id) || c),
+        ...DEFAULT_CATS.filter(c => !attuali.some(x => x.id === c.id)),
+      ].sort((a, b) => pos(a) - pos(b));
+
+      const patch = {};
+      if (JSON.stringify(categories) !== JSON.stringify(attuali)) patch.categories = categories;
+      // la busta di Svago passa a Extra solo se Extra non ne ha gia' una sua
+      const budgets = { ...(data.meta.budgets || {}) };
+      if (CAT_SPARITA in budgets) {
+        if (budgets.altro === undefined) budgets.altro = budgets[CAT_SPARITA];
+        delete budgets[CAT_SPARITA];
+        patch.budgets = budgets;
+      }
+      const rec = data.meta.recurring || [];
+      if (rec.some(r => r.catId === CAT_SPARITA)) {
+        patch.recurring = rec.map(r => r.catId === CAT_SPARITA ? { ...r, catId: 'altro' } : r);
+      }
+      const prodotti = data.meta.lista || [];
+      if (prodotti.some(p => p.catId === CAT_SPARITA)) {
+        patch.lista = prodotti.map(p => p.catId === CAT_SPARITA ? { ...p, catId: 'altro' } : p);
+      }
+      if (Object.keys(patch).length) {
         catsAggiornate = true;
-        db.updateMeta(gid, { categories }).catch(e => toast(e.message));
+        db.updateMeta(gid, patch).catch(e => toast(e.message));
+      }
+      // le spese sono documenti a se': si riscrive solo quelle che usavano Svago
+      for (const e of data.expenses) {
+        if (e.catId === CAT_SPARITA && !svagoSpostate.has(e.id)) {
+          svagoSpostate.add(e.id);
+          db.saveExpense(gid, { ...e, catId: 'altro' }).catch(err => toast(err.message));
+        }
       }
     }
     // ricorrenti scadute: id deterministici, quindi idempotente anche tra più telefoni

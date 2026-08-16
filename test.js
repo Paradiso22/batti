@@ -143,10 +143,18 @@ assert.deepEqual(leggi('boh 15').mancanti, ['categoria']);
 assert.deepEqual(leggi('').mancanti, ['importo', 'categoria']);
 
 // categorie riconosciute dalle parole
-assert.equal(leggi('serata caraibica 30').catId, 'svago');
+assert.equal(leggi('serata caraibica 30').catId, 'altro');   // Svago non c'e' piu': va in Extra
 assert.equal(leggi('bolletta luce 90').catId, 'bollette');
 assert.equal(leggi('messo da parte 200').catId, 'risparmi');
 assert.equal(leggi('treno 18,90').catId, 'trasporti');
+// le due categorie nuove vincono su quelle che prima si prendevano le parole
+assert.equal(leggi('netflix 12,99').catId, 'abbonamenti');   // prima finiva in Bollette
+assert.equal(leggi('regalo per Ele 45').catId, 'regali');    // prima finiva in Shopping
+assert.equal(leggi('spotify 10,99').catId, 'abbonamenti');
+assert.equal(leggi('compleanno di mamma 60').catId, 'regali');
+// e quelle di sempre non si spostano
+assert.equal(leggi('amazon 24,99').catId, 'shopping');
+assert.equal(leggi('benzina 50').catId, 'trasporti');
 
 // lista della spesa: il ritmo si impara dalle date, non si chiede
 assert.equal(cadenzaAppresa([]), null);

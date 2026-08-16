@@ -152,6 +152,17 @@ export const DEFAULT_CATS = [
   { id: 'altro', name: 'Extra', icon: 'wallet' },
 ];
 
+// Come e' stata pagata la spesa. Gli id sono quelli dei conti di Gestione Soldi,
+// cosi' l'import ci si appoggia direttamente: 'contanti' e 'carta' esistono
+// gia' identici la'. 'conto' sta per il conto corrente e la' va deciso quale
+// (Principale o Cointestato), perche' Soldi ne ha due.
+export const PAGAMENTI = [
+  { id: 'contanti', name: 'Contanti' },
+  { id: 'carta', name: 'Carta' },
+  { id: 'conto', name: 'Conto' },
+];
+export const nomePagamento = id => PAGAMENTI.find(p => p.id === id)?.name || null;
+
 // Parole che fanno indovinare la categoria da una frase scritta a mano.
 // Gli id restano quelli di sempre: cambiano i nomi mostrati, non i dati salvati.
 // L'ordine conta, vince la prima categoria che trova una parola: 'regali' prima

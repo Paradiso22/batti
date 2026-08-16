@@ -192,6 +192,7 @@ const SOLDI = [
   ['pasti', 'Pasti fuori o domicilio'], ['regali', 'Regali'], ['sanita', 'Sanità'],
   ['shopping', 'Shopping'], ['spesa-casa', 'Spesa Casa'], ['tasse', 'Tasse e Contributi'],
   ['viaggi', 'Viaggi'], ['utenze', 'Utenze'], ['rettifiche', 'Rettifiche'],
+  ['risparmi', 'Risparmi'], // aggiunta a mano in Gestione Soldi il 16/08/2026
 ];
 const normSoldi = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 function mapCategory(battiName) {
@@ -214,7 +215,7 @@ const ACCOPPIAMENTO = {
   spesa: 'spesa-casa', casa: 'affitto', bollette: 'utenze', fuori: 'pasti',
   shopping: 'shopping', trasporti: 'carburante', abbonamenti: 'abbonamenti',
   salute: 'sanita', regali: 'regali', viaggi: 'viaggi', altro: 'extra',
-  risparmi: null, // in Gestione Soldi non c'e': l'import ripiega sulla descrizione
+  risparmi: 'risparmi',
 };
 for (const c of DEFAULT_CATS) {
   assert.ok(c.id in ACCOPPIAMENTO, `categoria senza accoppiamento noto: ${c.id}`);

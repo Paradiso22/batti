@@ -1,5 +1,5 @@
 // app.js - interfaccia. Stato in S, render a stringhe, eventi delegati con data-act.
-import { computeShares, computeBalances, settlePlan, dueRecurring, monthKey, fmtCents, parseAmount, budgetAt, setBudgetFrom, interpretaSpesa, settimaneDi, cadenzaAppresa, tornaInLista, rimanda, giorniTra, DEFAULT_CATS } from './logic.js';
+import { computeShares, computeBalances, settlePlan, dueRecurring, monthKey, fmtCents, parseAmount, budgetAt, setBudgetFrom, interpretaSpesa, settimaneDi, cadenzaAppresa, tornaInLista, rimanda, giorniTra, DEFAULT_CATS, PAGAMENTI, nomePagamento } from './logic.js';
 import * as db from './db.js';
 
 /* ---------- icone: unico set, tratto 1.75 ---------- */
@@ -43,7 +43,7 @@ const PATHS = {
 const icon = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${PATHS[n]}"/></svg>`;
 
 const CAT_SPARITA = 'svago'; // in Gestione Soldi non c'e': le sue voci passano a Extra
-const VERSIONE = 'v10'; // si legge in Altro: serve a capire se un telefono e' aggiornato
+const VERSIONE = 'v11'; // si legge in Altro: serve a capire se un telefono e' aggiornato
 const MCOLORS = ['#2f6bd8', '#c76a10', '#0e9488', '#8a4fc9', '#8a7a1f', '#c94f7c'];
 // Promemoria: si alternano, così non diventano subito rumore di fondo.
 // Li legge anche il service worker (glieli passo nella cache di stato).
@@ -630,7 +630,7 @@ function ensureGroup(gid) {
           materialized.add(due.expenseId);
           db.saveExpense(gid, {
             id: due.expenseId, desc: rec.desc, amount: rec.amount, paidBy: rec.paidBy,
-            shares: rec.shares, catId: rec.catId, date: due.date, recId: rec.id, createdAt: Date.now(),
+            shares: rec.shares, catId: rec.catId, pay: rec.pay || 'conto', date: due.date, recId: rec.id, createdAt: Date.now(),
           }).catch(e => toast(e.message));
         }
       }
@@ -941,9 +941,10 @@ function receiptView() {
           ? `${esc(mname(e.paidBy))} · spesa personale`
           : `${esc(mname(e.paidBy))} · tutta a ${esc(mname(ids[0]))}`;
       })();
+    const come = nomePagamento(e.pay);
     rows += `<button class="rrow ${e.isTransfer ? 'is-transfer' : ''} ${isNew ? 'rrow--new' : ''}" data-act="edit-exp" data-id="${esc(e.id)}">
       <span class="ric">${icon(e.isTransfer ? 'swap' : cat(e.catId).icon, 19)}</span>
-      <span><span class="rdesc">${esc(e.desc || cat(e.catId).name)}</span><div class="rwho">${who}</div></span>
+      <span><span class="rdesc">${esc(e.desc || cat(e.catId).name)}</span><div class="rwho">${who}${come ? ` · ${esc(come.toLowerCase())}` : ''}</div></span>
       <span class="amt">${fmt(e.amount)}<small> €</small></span>
     </button>`;
   }
@@ -1372,7 +1373,7 @@ function altroView() {
     <span class="f-label">Spese ricorrenti - si battono da sole</span>
     ${(m.recurring || []).length ? `<div class="setlist">${m.recurring.map(r => `<div class="li">
       ${icon(cat(r.catId).icon, 17)}
-      <span>${esc(r.desc)} <span class="sub">${EVERY_LABEL[r.everyMonths || 1]} il ${r.dayOfMonth} · ${esc(mname(r.paidBy))} paga · ${fmt(r.amount)} €</span></span>
+      <span>${esc(r.desc)} <span class="sub">${EVERY_LABEL[r.everyMonths || 1]} il ${r.dayOfMonth} · ${esc(mname(r.paidBy))} paga${nomePagamento(r.pay) ? ` con ${esc(nomePagamento(r.pay).toLowerCase())}` : ''} · ${fmt(r.amount)} €</span></span>
       <button class="iconbtn danger" data-act="del-rec" data-id="${esc(r.id)}" aria-label="Elimina ricorrente">${icon('trash', 16)}</button>
     </div>`).join('')}</div>` : `<p class="r-note">Affitto, bollette, abbonamenti: si battono da soli, con la cadenza che scegli (anche ogni 2, 3, 6 o 12 mesi).</p>`}
     <div class="key-row"><button class="key key--wide" data-act="open-rec">${icon('plus', 16)} Nuova ricorrente</button></div>
@@ -1441,11 +1442,19 @@ function altroView() {
 
 /* ---------- fogli (sheet) ---------- */
 
+// Di solito si paga sempre allo stesso modo: la scelta di ieri fa da default,
+// e resta su questo telefono (l'altra puo' avere abitudini diverse).
+const ULTIMO_PAG = 'batti:pagamento';
+const pagDefault = () => {
+  const v = localStorage.getItem(ULTIMO_PAG);
+  return PAGAMENTI.some(p => p.id === v) ? v : 'carta';
+};
+
 function freshDraft() {
   const ms = members();
   return {
     amount: 0, desc: '', catId: cats()[0]?.id || 'altro',
-    paidBy: myId() || ms[0]?.id, splitMode: 'equal',
+    paidBy: myId() || ms[0]?.id, splitMode: 'equal', pay: pagDefault(),
     selected: ms.map(m => m.id), values: {}, date: todayISO(), editId: null,
   };
 }
@@ -1503,6 +1512,8 @@ function sheetHtml() {
         <div class="catgrid">${cats().map(c => `<button class="catbtn" data-act="pick-cat" data-id="${esc(c.id)}" aria-pressed="${c.id === d.catId}">${icon(c.icon, 20)}<span>${esc(c.name)}</span></button>`).join('')}</div>
         <span class="f-label">Ha anticipato i soldi</span>
         <div class="chips">${ms.map(m => `<button class="chip" style="--mcol:${mcolorOf(m)}" data-act="pick-payer" data-id="${esc(m.id)}" aria-pressed="${d.paidBy === m.id}"><span class="cdot"></span>${esc(m.name)}</button>`).join('')}</div>
+        <span class="f-label">Come</span>
+        <div class="seg">${PAGAMENTI.map(p => `<button data-act="pick-pay" data-m="${esc(p.id)}" aria-pressed="${d.pay === p.id}">${esc(p.name)}</button>`).join('')}</div>
         <span class="f-label">A carico di - chi deve sostenere la spesa</span>
         <div class="seg">
           <button data-act="split-mode" data-m="equal" aria-pressed="${d.splitMode === 'equal'}">Uguale</button>
@@ -1580,6 +1591,8 @@ function sheetHtml() {
         <div class="catgrid">${cats().map(c => `<button class="catbtn" data-act="rec-cat" data-id="${esc(c.id)}" aria-pressed="${c.id === d.catId}">${icon(c.icon, 20)}<span>${esc(c.name)}</span></button>`).join('')}</div>
         <span class="f-label">Paga</span>
         <div class="chips">${ms.map(m => `<button class="chip" style="--mcol:${mcolorOf(m)}" data-act="rec-payer" data-id="${esc(m.id)}" aria-pressed="${d.paidBy === m.id}"><span class="cdot"></span>${esc(m.name)}</button>`).join('')}</div>
+        <span class="f-label">Come</span>
+        <div class="seg">${PAGAMENTI.map(p => `<button data-act="rec-pay" data-m="${esc(p.id)}" aria-pressed="${d.pay === p.id}">${esc(p.name)}</button>`).join('')}</div>
         <span class="f-label">Divisa in parti uguali tra</span>
         <div class="chips">${ms.map(m => `<button class="chip" style="--mcol:${mcolorOf(m)}" data-act="rec-sel" data-id="${esc(m.id)}" aria-pressed="${d.selected.includes(m.id)}"><span class="cdot"></span>${esc(m.name)}</button>`).join('')}</div>
       </div><div class="perf"></div></div>
@@ -1650,7 +1663,7 @@ function render() {
   if (S.flag && S.data && !S.sheet) { // apertura diretta di un foglio via URL (demo/QA)
     if (S.flag === 'pad') S.sheet = { type: 'pad', draft: freshDraft() };
     if (S.flag === 'detail') S.sheet = { type: 'detail', draft: { ...freshDraft(), amount: 2350 } };
-    if (S.flag === 'rec') S.sheet = { type: 'rec', draft: { desc: '', amtStr: '', day: 1, every: 1, start: monthKey(todayISO()), catId: 'casa', paidBy: myId() || members()[0]?.id, selected: members().map(m => m.id) } };
+    if (S.flag === 'rec') S.sheet = { type: 'rec', draft: { desc: '', amtStr: '', day: 1, every: 1, start: monthKey(todayISO()), catId: 'casa', pay: pagDefault(), paidBy: myId() || members()[0]?.id, selected: members().map(m => m.id) } };
     S.flag = null;
   }
   // il focus sopravvive al re-render (tastierino usabile da tastiera)
@@ -1733,9 +1746,10 @@ async function saveExpenseFromDraft() {
   const id = d.editId || db.uid();
   const spesa = {
     id, desc: d.desc.trim(), amount: d.amount, paidBy: d.paidBy, shares,
-    catId: d.catId, date: d.date, isTransfer: false,
+    catId: d.catId, date: d.date, isTransfer: false, pay: d.pay || pagDefault(),
     createdAt: d.createdAt || Date.now(),
   };
+  localStorage.setItem(ULTIMO_PAG, spesa.pay); // la prossima parte da qui
   const prima = expenses().filter(e => e.id !== id); // per capire se questa sfora la busta
   await db.saveExpense(S.gid, spesa);
   if (!d.editId) {
@@ -1924,6 +1938,7 @@ const ACTS = {
   'save-exp': async () => {
     try { await saveExpenseFromDraft(); } catch (e) { toast(e.message); }
   },
+  'pick-pay': el => { S.sheet.draft.pay = el.dataset.m; render(); },
   'edit-exp': el => {
     const e = expenses().find(x => x.id === el.dataset.id);
     if (!e) return;
@@ -1932,7 +1947,7 @@ const ACTS = {
     S.sheet = {
       type: 'detail', draft: {
         amount: e.amount, desc: e.desc || '', catId: e.catId, paidBy: e.paidBy,
-        splitMode: 'exact', selected: Object.keys(e.shares),
+        splitMode: 'exact', selected: Object.keys(e.shares), pay: e.pay || pagDefault(),
         values: Object.fromEntries(Object.entries(e.shares).map(([id, v]) => [id, (v / 100).toFixed(2).replace('.', ',')])),
         date: e.date, editId: e.id, createdAt: e.createdAt,
       },
@@ -2041,10 +2056,11 @@ const ACTS = {
   },
 
   'open-rec': () => {
-    S.sheet = { type: 'rec', draft: { desc: '', amtStr: '', day: 1, every: 1, start: monthKey(todayISO()), catId: 'casa', paidBy: myId() || members()[0]?.id, selected: members().map(m => m.id) } };
+    S.sheet = { type: 'rec', draft: { desc: '', amtStr: '', day: 1, every: 1, start: monthKey(todayISO()), catId: 'casa', pay: pagDefault(), paidBy: myId() || members()[0]?.id, selected: members().map(m => m.id) } };
     render();
   },
   'rec-cat': el => { S.sheet.draft.catId = el.dataset.id; syncRecInputs(); render(); },
+  'rec-pay': el => { S.sheet.draft.pay = el.dataset.m; syncRecInputs(); render(); },
   'rec-payer': el => { S.sheet.draft.paidBy = el.dataset.id; syncRecInputs(); render(); },
   'rec-sel': el => {
     const d = S.sheet.draft, id = el.dataset.id;
@@ -2062,7 +2078,7 @@ const ACTS = {
       const shares = computeShares(amount, d.selected, 'equal');
       const rec = {
         id: db.uid(), desc: d.desc.trim(), amount, paidBy: d.paidBy, shares,
-        catId: d.catId, dayOfMonth: d.day, everyMonths: d.every, startMonth: d.start,
+        catId: d.catId, pay: d.pay || pagDefault(), dayOfMonth: d.day, everyMonths: d.every, startMonth: d.start,
       };
       S.sheet = null;
       await db.updateMeta(S.gid, { recurring: [...(meta().recurring || []), rec] });

@@ -419,6 +419,7 @@ select.f-input { appearance: none; }
 .li-fatto { color: var(--green); display: grid; place-items: center; }
 .li-tap { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 0; font: inherit; color: inherit; }
 .setlist .li .azioni { display: flex; align-items: center; }
+.li-cat { background: none; border: 0; padding: 0 7px 0 0; color: var(--ink-2); vertical-align: -3px; -webkit-tap-highlight-color: transparent; }
 .iconbtn { padding: 8px; border-radius: 8px; color: var(--ink-2); }
 .iconbtn:active { background: rgba(0,0,0,.06); }
 .iconbtn.danger { color: var(--red); }

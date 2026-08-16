@@ -52,7 +52,7 @@ const DEFAULT_CATS = [
   { id: 'risparmi', name: 'Risparmi', icon: 'piggy' },
   { id: 'altro', name: 'Altro', icon: 'box' },
 ];
-const VERSIONE = 'v7'; // si legge in Altro: serve a capire se un telefono e' aggiornato
+const VERSIONE = 'v8'; // si legge in Altro: serve a capire se un telefono e' aggiornato
 const MCOLORS = ['#2f6bd8', '#c76a10', '#0e9488', '#8a4fc9', '#8a7a1f', '#c94f7c'];
 // Promemoria: si alternano, così non diventano subito rumore di fondo.
 // Li legge anche il service worker (glieli passo nella cache di stato).
@@ -104,7 +104,7 @@ const todayISO = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 const S = {
-  route: [], gid: null, data: null, unsub: null, loadErr: null, chatInCorso: new Set(), chatApri: null,
+  route: [], gid: null, data: null, unsub: null, loadErr: null, chatInCorso: new Set(), chatApri: null, listaApri: null,
   sheet: null, month: monthKey(todayISO()),
   online: navigator.onLine, justPrinted: null, datiProtetti: false,
 };
@@ -621,7 +621,7 @@ function ensureGroup(gid) {
   });
 }
 
-addEventListener('hashchange', () => { S.sheet = null; route(); });
+addEventListener('hashchange', () => { S.sheet = null; S.listaApri = null; route(); });
 // passando da schermo stretto a largo (o viceversa) la disposizione si rifà
 matchMedia('(min-width: 1380px)').addEventListener('change', () => {
   if (schermoLargo() && S.route[0] === 'gruppo' && S.route[1] === 'chat') { nav('#/gruppo'); return; }
@@ -1015,6 +1015,21 @@ const cestino = () => { const oggi = todayISO(); return tuttaLista().filter(it =
 // I cancellati da oltre 30 giorni spariscono con la prima scrittura utile:
 // nessuna scrittura in piu' e nessuna corsa fra i due telefoni.
 const senzaScaduti = arr => { const oggi = todayISO(); return arr.filter(it => !scaduto(it, oggi)); };
+// Stesse categorie del resto dell'app: quelle del gruppo, non un set a parte.
+// I prodotti scritti prima non ne avevano una: finiscono sotto Spesa.
+const catDi = it => it.catId || 'spesa';
+const ordineCat = it => { const i = cats().findIndex(c => c.id === catDi(it)); return i < 0 ? 999 : i; };
+
+// Il pallino della categoria apre la griglia sotto la riga, come nella chat.
+function catBtnHtml(it) {
+  const c = cat(catDi(it));
+  return `<button class="li-cat" data-act="lista-catapri" data-id="${esc(it.id)}" aria-label="Categoria: ${esc(c.name)}">${icon(c.icon, 16)}</button>`;
+}
+function catGridHtml(it) {
+  if (S.listaApri !== it.id) return '';
+  return `<div class="catgrid" style="margin:2px 0 12px">${cats().map(c =>
+    `<button class="catbtn" data-act="lista-cat" data-id="${esc(it.id)}" data-v="${esc(c.id)}" aria-pressed="${c.id === catDi(it)}">${icon(c.icon, 20)}<span>${esc(c.name)}</span></button>`).join('')}</div>`;
+}
 
 // Il ritmo detto a parole. Se non l'hai scelto tu, l'ha imparato lui.
 function ritmoTesto(it) {
@@ -1029,13 +1044,13 @@ function rigaManca(it) {
     : it.presoIl ? `ultima volta ${fmtDay(it.presoIl)}` : 'prima volta';
   return `<div class="li">
     <button class="spunta" data-act="lista-preso" data-id="${esc(it.id)}" aria-label="Preso, ${esc(it.nome)}"></button>
-    <span>${esc(it.nome)}<div class="sub">${sub}</div></span>
+    <span>${catBtnHtml(it)}${esc(it.nome)}<div class="sub">${sub}</div></span>
     <span class="azioni">
       <button class="iconbtn" data-act="lista-nome" data-id="${esc(it.id)}" aria-label="Correggi il nome, ${esc(it.nome)}">${icon('pencil', 16)}</button>
       <button class="iconbtn" data-act="lista-dopo" data-id="${esc(it.id)}" aria-label="Lo compro più in là, ${esc(it.nome)}">${icon('back', 16)}</button>
       <button class="iconbtn danger" data-act="lista-del" data-id="${esc(it.id)}" aria-label="Togli ${esc(it.nome)}">${icon('trash', 16)}</button>
     </span>
-  </div>`;
+  </div>${catGridHtml(it)}`;
 }
 
 function rigaPreso(it, oggi) {
@@ -1045,20 +1060,21 @@ function rigaPreso(it, oggi) {
     ? `preso ${fmtDay(it.presoIl)} · ${ritmoTesto(it)}`
     : `torna fra ${mancano} giorni · ${ritmoTesto(it)}`;
   return `<div class="li">
-    <span class="li-fatto">${icon('check', 16)}</span>
+    ${catBtnHtml(it)}
     <button class="li-tap" data-act="lista-rimetti" data-id="${esc(it.id)}">${esc(it.nome)}<div class="sub">${sub}</div></button>
     <span class="azioni">
       <button class="iconbtn" data-act="lista-nome" data-id="${esc(it.id)}" aria-label="Correggi il nome, ${esc(it.nome)}">${icon('pencil', 16)}</button>
       <button class="iconbtn" data-act="lista-ritmo" data-id="${esc(it.id)}" aria-label="Cambia ogni quanto serve ${esc(it.nome)}">${icon('gear', 16)}</button>
       <button class="iconbtn danger" data-act="lista-del" data-id="${esc(it.id)}" aria-label="Togli ${esc(it.nome)}">${icon('trash', 16)}</button>
     </span>
-  </div>`;
+  </div>${catGridHtml(it)}`;
 }
 
 function listaView() {
   const oggi = todayISO();
   const items = lista();
-  const manca = items.filter(it => tornaInLista(it, oggi));
+  // in lista i prodotti stanno per categoria: al negozio si gira per reparti
+  const manca = items.filter(it => tornaInLista(it, oggi)).sort((a, b) => ordineCat(a) - ordineCat(b));
   const presi = items.filter(it => !tornaInLista(it, oggi)).sort((a, b) => (b.presoIl || '').localeCompare(a.presoIl || ''));
   const buttati = cestino().sort((a, b) => b.cancellatoIl.localeCompare(a.cancellatoIl));
   const content = `
@@ -1204,7 +1220,7 @@ function storicoListaHtml() {
   return `<div class="perf-wrap"><div class="perf top"></div><div class="paper">
     <span class="f-label">Ogni quanto ricompriamo</span>
     ${presi.map(p => `<div class="brow">
-      <div class="bl">${icon('cart', 18)}
+      <div class="bl">${icon(cat(catDi(p)).icon, 18)}
         <span>${esc(p.nome)}<span class="pct">${p.sett ? `ogni ${p.sett} sett.` : 'presa una volta'}</span></span>
         <span class="amt">${p.volte}×</span></div>
       <div class="rail"><div class="fill" style="width:${Math.round(p.volte / maxVolte * 100)}%"></div></div>
@@ -1751,6 +1767,14 @@ const ACTS = {
     };
     render();
   },
+  'lista-catapri': el => {
+    S.listaApri = S.listaApri === el.dataset.id ? null : el.dataset.id;
+    render();
+  },
+  'lista-cat': el => {
+    S.listaApri = null;
+    cambiaProdotto(el.dataset.id, x => ({ ...x, catId: el.dataset.v }));
+  },
   'lista-nome': el => {
     const it = trovaProdotto(el); if (!it) return;
     S.sheet = {
@@ -2078,7 +2102,7 @@ const SUBMITS = {
       return;
     }
     try {
-      const nuovo = { id: db.uid().slice(0, 8), nome, manca: true, presoIl: null, storico: [], sett: null };
+      const nuovo = { id: db.uid().slice(0, 8), nome, catId: 'spesa', manca: true, presoIl: null, storico: [], sett: null };
       await db.updateMeta(S.gid, { lista: [...senzaScaduti(tuttaLista()), nuovo] });
     } catch (e) { toast(e.message); }
   },

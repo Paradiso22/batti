@@ -193,6 +193,23 @@ a { color: inherit; }
 .rrow--new { animation: feed 480ms steps(8) both; }
 @keyframes feed { from { transform: translateY(-16px); opacity: 0; clip-path: inset(0 0 85% 0); } to { transform: none; opacity: 1; clip-path: inset(0 0 0 0); } }
 
+/* Tendina delle spese datate in avanti: chiusa non ruba spazio a oggi,
+   aperta le mostra sbiadite perche' non sono ancora successe davvero. */
+.futuro-tog {
+  display: grid; grid-template-columns: 14px 1fr auto; gap: 8px; align-items: center;
+  width: 100%; text-align: left; padding: 9px 0;
+  border-bottom: 1px dashed var(--line);
+  font-family: var(--f-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: .2em; text-transform: uppercase; color: var(--ink-2);
+}
+.futuro-tog svg { display: block; transition: transform 120ms ease-out; }
+.futuro-tog[aria-expanded="true"] svg { transform: rotate(90deg); }
+.futuro-tog .amt { letter-spacing: .04em; }
+.futuro-tog:active { background: rgba(0,0,0,.035); }
+.futuro { opacity: .5; }
+.futuro .rrow:last-child { border-bottom: 1px dashed var(--line); }
+.futuro .r-date:first-child { margin-top: 10px; }
+
 .r-total { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--f-mono); font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding-top: 10px; }
 
 .r-note { font-family: var(--f-mono); font-size: 11px; color: var(--ink-2); line-height: 1.55; text-wrap: pretty; }
@@ -595,5 +612,5 @@ select.f-input { appearance: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .rrow--new, .sheet-panel, .toast, .lcd.is-flash .lcd-caption { animation: none; }
-  .key, .nav-key { transition: none; }
+  .key, .nav-key, .futuro-tog svg { transition: none; }
 }

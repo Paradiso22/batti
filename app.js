@@ -43,7 +43,7 @@ const PATHS = {
 const icon = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${PATHS[n]}"/></svg>`;
 
 const CAT_SPARITA = 'svago'; // in Gestione Soldi non c'e': le sue voci passano a Extra
-const VERSIONE = 'v11'; // si legge in Altro: serve a capire se un telefono e' aggiornato
+const VERSIONE = 'v12'; // si legge in Altro: serve a capire se un telefono e' aggiornato
 const MCOLORS = ['#2f6bd8', '#c76a10', '#0e9488', '#8a4fc9', '#8a7a1f', '#c94f7c'];
 // Promemoria: si alternano, così non diventano subito rumore di fondo.
 // Li legge anche il service worker (glieli passo nella cache di stato).
@@ -96,7 +96,7 @@ const todayISO = () => {
 };
 const S = {
   route: [], gid: null, data: null, unsub: null, loadErr: null, chatInCorso: new Set(), chatApri: null, listaApri: null,
-  sheet: null, month: monthKey(todayISO()),
+  sheet: null, month: monthKey(todayISO()), futureAperte: false,
   online: navigator.onLine, justPrinted: null, datiProtetti: false,
 };
 
@@ -925,11 +925,9 @@ function myBalanceLcd(tab) {
   });
 }
 
-function receiptView() {
-  const exps = [...expenses()].sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || 0) - (a.createdAt || 0));
-  const total = exps.filter(e => !e.isTransfer && monthKey(e.date) === S.month).reduce((t, e) => t + e.amount, 0);
+function righeScontrino(lista) {
   let rows = '', lastDate = '';
-  for (const e of exps.slice(0, 80)) {
+  for (const e of lista) {
     if (e.date !== lastDate) { rows += `<div class="r-date">${fmtDay(e.date)}</div>`; lastDate = e.date; }
     const isNew = e.id === S.justPrinted;
     const who = e.isTransfer
@@ -948,6 +946,22 @@ function receiptView() {
       <span class="amt">${fmt(e.amount)}<small> €</small></span>
     </button>`;
   }
+  return rows;
+}
+
+function receiptView() {
+  const oggi = todayISO();
+  const exps = [...expenses()].sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || 0) - (a.createdAt || 0));
+  // Le spese datate in avanti (la bolletta gia' segnata, l'affitto del mese
+  // prossimo) restano in cima perche' l'ordine e' cronologico, ma chiuse in una
+  // tendina: cosi' la prima riga che leggi e' al massimo quella di oggi.
+  const future = exps.filter(e => e.date > oggi);
+  const fatte = exps.filter(e => e.date <= oggi);
+  const total = exps.filter(e => !e.isTransfer && monthKey(e.date) === S.month).reduce((t, e) => t + e.amount, 0);
+  const totFuture = future.filter(e => !e.isTransfer).reduce((t, e) => t + e.amount, 0);
+  // se hai appena battuto una spesa datata in avanti la tendina si apre da
+  // sola, altrimenti sembrerebbe sparita nel nulla
+  const aperta = S.futureAperte || future.some(e => e.id === S.justPrinted);
   const content = `
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
     <div class="r-head">
@@ -955,9 +969,19 @@ function receiptView() {
       <div class="r-meta">Documento gestionale · ${members().length === 1 ? '1 persona' : members().length + ' persone'}</div>
     </div>
     <hr class="r-rule">
-    ${exps.length ? rows : `<div class="empty"><div class="big">Scontrino vuoto</div>
+    ${future.length ? `
+      <button class="futuro-tog" data-act="tgl-future" aria-expanded="${aperta}">
+        ${icon('chevR', 14)}
+        <span>Future · ${future.length} ${future.length === 1 ? 'spesa' : 'spese'}</span>
+        <span class="amt">${fmt(totFuture)}<small> €</small></span>
+      </button>
+      ${aperta ? `<div class="futuro">${righeScontrino(future)}</div>` : ''}
+    ` : ''}
+    ${fatte.length ? righeScontrino(fatte.slice(0, 80))
+      : future.length ? `<p class="r-note r-center" style="margin:14px 0">Per ora c'è solo roba in arrivo: qui sotto comparirà appena arriva il giorno.</p>`
+      : `<div class="empty"><div class="big">Scontrino vuoto</div>
       <p>Batti la prima spesa col tasto verde qui sotto.</p></div>`}
-    ${exps.length > 80 ? `<p class="r-note r-center" style="margin-top:10px">Mostro le ultime 80 · le altre restano nei totali</p>` : ''}
+    ${fatte.length > 80 ? `<p class="r-note r-center" style="margin-top:10px">Mostro le ultime 80 · le altre restano nei totali</p>` : ''}
     <hr class="r-rule solid">
     <div class="r-total"><span>Totale ${monthLabel(S.month).toLowerCase()}</span><span class="amt">${fmt(total)}<small> €</small></span></div>
   </div><div class="perf"></div></div>`;
@@ -1938,6 +1962,7 @@ const ACTS = {
   'save-exp': async () => {
     try { await saveExpenseFromDraft(); } catch (e) { toast(e.message); }
   },
+  'tgl-future': () => { S.futureAperte = !S.futureAperte; render(); },
   'pick-pay': el => { S.sheet.draft.pay = el.dataset.m; render(); },
   'edit-exp': el => {
     const e = expenses().find(x => x.id === el.dataset.id);

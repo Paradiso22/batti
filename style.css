@@ -505,6 +505,19 @@ select.f-input { appearance: none; }
 
 /* ---------- Varie ---------- */
 
+/* Tira-per-aggiornare: una targhetta del POS che scende dall'alto. */
+#ptr {
+  position: fixed; top: calc(10px + env(safe-area-inset-top)); left: 50%; z-index: 61;
+  transform: translate(-50%, -80px); transition: transform 150ms ease-out;
+  padding: 9px 16px; border-radius: 999px; pointer-events: none; white-space: nowrap;
+  background: var(--chassis-2); border: 1px solid var(--chassis-3); color: var(--silk-dim);
+  font-family: var(--f-silk); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  box-shadow: 0 6px 16px rgba(0,0,0,.45);
+}
+#ptr.show { transform: translate(-50%, 0); }
+#ptr.ready { background: var(--green); border-color: var(--green); color: #fff; }
+@media (prefers-reduced-motion: reduce) { #ptr { transition: none; } }
+
 .toast {
   position: fixed; left: 50%; bottom: calc(120px + var(--sab)); transform: translateX(-50%);
   z-index: 60; display: flex; align-items: center; gap: 8px;

@@ -44,7 +44,7 @@ const PATHS = {
 const icon = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${PATHS[n]}"/></svg>`;
 
 const CAT_SPARITA = 'svago'; // in Gestione Soldi non c'e': le sue voci passano a Extra
-const VERSIONE = 'v13'; // si legge in Altro: serve a capire se un telefono e' aggiornato
+const VERSIONE = 'v14'; // si legge in Altro: serve a capire se un telefono e' aggiornato
 const MCOLORS = ['#2f6bd8', '#c76a10', '#0e9488', '#8a4fc9', '#8a7a1f', '#c94f7c'];
 // Promemoria: si alternano, così non diventano subito rumore di fondo.
 // Li legge anche il service worker (glieli passo nella cache di stato).
@@ -1488,7 +1488,8 @@ function altroView() {
     <hr class="r-rule">
     <span class="f-label">Versione</span>
     <p class="r-note r-center"><b style="font-size:15px;color:var(--ink)">Batti ${VERSIONE}</b><br>
-    Se sui due telefoni leggi numeri diversi, uno dei due non ha ancora preso l'aggiornamento: chiudi l'app e riaprila.</p>
+    Se sui due telefoni leggi numeri diversi, uno dei due non ha ancora preso l'aggiornamento: riscaricala da qui, o tira giù lo scontrino. Le spese non si toccano.</p>
+    <div class="key-row"><button class="key key--wide" data-act="riscarica">${icon('back', 16)} Riscarica l'app adesso</button></div>
   </div><div class="perf"></div></div>`;
   return groupFrame('altro', myBalanceLcd('altro'), content);
 }
@@ -1992,6 +1993,7 @@ const ACTS = {
     try { await saveExpenseFromDraft(); } catch (e) { toast(e.message); }
   },
   'tgl-future': () => { S.futureAperte = !S.futureAperte; render(); },
+  'riscarica': () => riscarica(),
   'cerca-apri': () => { S.cerca = ''; render(); document.getElementById('cerca')?.focus(); },
   'cerca-chiudi': () => { S.cerca = null; render(); },
   'pick-pay': el => { S.sheet.draft.pay = el.dataset.m; render(); },
@@ -2341,3 +2343,47 @@ if ('serviceWorker' in navigator) {
   });
   addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
 }
+
+// Riscarica l'app dal server, come in Gestione Soldi. Si buttano solo i file
+// dell'app in cache: le spese stanno in Firestore/IndexedDB e localStorage e
+// non si toccano. Il service worker resta registrato (via lui i promemoria in
+// background); 'batti-stato' resta, e' lo stato dei promemoria.
+async function riscarica() {
+  // offline, senza cache l'app non si riaprirebbe proprio
+  if (!navigator.onLine) { toast('Sei offline: riprova quando torna la rete'); return; }
+  toast('Riscarico l\'app…');
+  try {
+    await (await navigator.serviceWorker?.getRegistration())?.update();
+    for (const k of await caches.keys()) if (k !== 'batti-stato') await caches.delete(k);
+  } catch { /* si ricarica comunque */ }
+  // la query unica scavalca la cache del browser e quella di GitHub Pages
+  location.href = location.pathname + '?r=' + Date.now() + location.hash;
+}
+
+// Tira giu' per aggiornare: nell'app installata il gesto del browser non c'e'.
+// Parte solo con lo scontrino gia' in cima e nessun foglio aperto, cosi' non
+// scatta mentre scorri o batti una spesa.
+const ptr = document.createElement('div');
+ptr.id = 'ptr';
+ptr.setAttribute('aria-hidden', 'true');
+ptr.textContent = '↻ Rilascia per aggiornare';
+document.body.appendChild(ptr);
+let tiroDa = null, tiroPronto = false;
+document.addEventListener('touchstart', e => {
+  const carta = document.querySelector('.paper-scroll');
+  tiroDa = !S.sheet && !e.target.closest('.sheet, .chat-lato, .dock') && (!carta || carta.scrollTop <= 0)
+    ? e.touches[0].clientY : null;
+  tiroPronto = false;
+}, { passive: true });
+document.addEventListener('touchmove', e => {
+  if (tiroDa === null) return;
+  const d = e.touches[0].clientY - tiroDa;
+  tiroPronto = d > 90;
+  ptr.classList.toggle('show', d > 30);
+  ptr.classList.toggle('ready', tiroPronto);
+}, { passive: true });
+document.addEventListener('touchend', () => {
+  ptr.classList.remove('show', 'ready');
+  if (tiroPronto) riscarica();
+  tiroDa = null; tiroPronto = false;
+});

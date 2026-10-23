@@ -193,6 +193,12 @@ a { color: inherit; }
 .rrow--new { animation: feed 480ms steps(8) both; }
 @keyframes feed { from { transform: translateY(-16px); opacity: 0; clip-path: inset(0 0 85% 0); } to { transform: none; opacity: 1; clip-path: inset(0 0 0 0); } }
 
+/* Lente: sta nell'angolo della carta, dove non ruba una riga allo scontrino. */
+.lente { position: absolute; top: 8px; right: 8px; padding: 7px; border-radius: 9px; color: var(--ink-2); }
+.lente:active { background: rgba(0,0,0,.06); }
+.cerca-bar { display: flex; align-items: center; gap: 6px; margin-top: 12px; }
+.cerca-bar .f-input { flex: 1; }
+
 /* Tendina delle spese datate in avanti: chiusa non ruba spazio a oggi,
    aperta le mostra sbiadite perche' non sono ancora successe davvero. */
 .futuro-tog {

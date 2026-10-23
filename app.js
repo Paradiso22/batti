@@ -39,11 +39,12 @@ const PATHS = {
   calendar: 'M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-11ZM4 10.5h16M8.5 3.5v4M15.5 3.5v4',
   fuel: 'M5.5 20.5V6A1.5 1.5 0 0 1 7 4.5h5A1.5 1.5 0 0 1 13.5 6v14.5M3.5 20.5h12M8 8h4v3.5H8zM13.5 10h3a1 1 0 0 1 1 1v4.2a1.6 1.6 0 0 0 3.2 0V9.5l-2.2-2.2',
   gift: 'M4.5 11.5h15v8a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-8ZM3.5 8.5h17v3h-17v-3ZM12 8.5v12M12 8.5S10.8 4 8.7 4a2.2 2.2 0 0 0 0 4.5H12Zm0 0s1.2-4.5 3.3-4.5a2.2 2.2 0 0 1 0 4.5H12Z',
+  search: 'M10.8 4a6.8 6.8 0 1 0 0 13.6 6.8 6.8 0 0 0 0-13.6ZM15.8 15.8 20.5 20.5',
 };
 const icon = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${PATHS[n]}"/></svg>`;
 
 const CAT_SPARITA = 'svago'; // in Gestione Soldi non c'e': le sue voci passano a Extra
-const VERSIONE = 'v12'; // si legge in Altro: serve a capire se un telefono e' aggiornato
+const VERSIONE = 'v13'; // si legge in Altro: serve a capire se un telefono e' aggiornato
 const MCOLORS = ['#2f6bd8', '#c76a10', '#0e9488', '#8a4fc9', '#8a7a1f', '#c94f7c'];
 // Promemoria: si alternano, così non diventano subito rumore di fondo.
 // Li legge anche il service worker (glieli passo nella cache di stato).
@@ -96,7 +97,7 @@ const todayISO = () => {
 };
 const S = {
   route: [], gid: null, data: null, unsub: null, loadErr: null, chatInCorso: new Set(), chatApri: null, listaApri: null,
-  sheet: null, month: monthKey(todayISO()), futureAperte: false,
+  sheet: null, month: monthKey(todayISO()), futureAperte: false, cerca: null,
   online: navigator.onLine, justPrinted: null, datiProtetti: false,
 };
 
@@ -925,6 +926,18 @@ function myBalanceLcd(tab) {
   });
 }
 
+// Ricerca: un campo solo. Ogni parola scritta deve comparire da qualche parte
+// nella spesa - descrizione, categoria, chi, pagamento, importo o data - cosi'
+// "sushi 62", "ele carta" e "ottobre" funzionano senza filtri separati.
+const senzaSegni = s => String(s || '').toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
+const testoSpesa = e => senzaSegni([
+  e.desc, cat(e.catId).name, mname(e.paidBy),
+  ...Object.keys(e.shares || {}).map(mname),
+  nomePagamento(e.pay),
+  fmtCents(e.amount), String(Math.round(e.amount / 100)),
+  e.date, fmtDay(e.date), monthLabel(monthKey(e.date)),
+].join(' '));
+
 function righeScontrino(lista) {
   let rows = '', lastDate = '';
   for (const e of lista) {
@@ -955,19 +968,33 @@ function receiptView() {
   // Le spese datate in avanti (la bolletta gia' segnata, l'affitto del mese
   // prossimo) restano in cima perche' l'ordine e' cronologico, ma chiuse in una
   // tendina: cosi' la prima riga che leggi e' al massimo quella di oggi.
-  const future = exps.filter(e => e.date > oggi);
-  const fatte = exps.filter(e => e.date <= oggi);
+  const parole = S.cerca ? senzaSegni(S.cerca).split(/\s+/).filter(Boolean) : [];
+  const filtra = lista => parole.length
+    ? lista.filter(e => { const t = testoSpesa(e); return parole.every(p => t.includes(p)); })
+    : lista;
+  const future = filtra(exps.filter(e => e.date > oggi));
+  const fatte = filtra(exps.filter(e => e.date <= oggi));
+  const trovate = future.length + fatte.length;
+  // il totale resta quello vero del mese: la ricerca nasconde righe, non soldi
   const total = exps.filter(e => !e.isTransfer && monthKey(e.date) === S.month).reduce((t, e) => t + e.amount, 0);
   const totFuture = future.filter(e => !e.isTransfer).reduce((t, e) => t + e.amount, 0);
   // se hai appena battuto una spesa datata in avanti la tendina si apre da
-  // sola, altrimenti sembrerebbe sparita nel nulla
-  const aperta = S.futureAperte || future.some(e => e.id === S.justPrinted);
+  // sola, altrimenti sembrerebbe sparita nel nulla. Cercando resta aperta:
+  // un risultato chiuso li' dentro sarebbe invisibile.
+  const aperta = S.futureAperte || !!parole.length || future.some(e => e.id === S.justPrinted);
   const content = `
   <div class="perf-wrap"><div class="perf top"></div><div class="paper">
+    ${S.cerca === null ? `<button class="lente" data-act="cerca-apri" aria-label="Cerca nelle spese">${icon('search', 17)}</button>` : ''}
     <div class="r-head">
       <div class="r-title">${esc(meta().name)}</div>
-      <div class="r-meta">Documento gestionale · ${members().length === 1 ? '1 persona' : members().length + ' persone'}</div>
+      <div class="r-meta">${parole.length
+        ? `${trovate === 1 ? '1 spesa trovata' : trovate + ' spese trovate'}`
+        : `Documento gestionale · ${members().length === 1 ? '1 persona' : members().length + ' persone'}`}</div>
     </div>
+    ${S.cerca !== null ? `<div class="cerca-bar">
+      <input class="f-input" id="cerca" value="${esc(S.cerca)}" autocomplete="off" placeholder="Importo, parola o data">
+      <button class="iconbtn" data-act="cerca-chiudi" aria-label="Chiudi la ricerca">${icon('x', 17)}</button>
+    </div>` : ''}
     <hr class="r-rule">
     ${future.length ? `
       <button class="futuro-tog" data-act="tgl-future" aria-expanded="${aperta}">
@@ -978,6 +1005,8 @@ function receiptView() {
       ${aperta ? `<div class="futuro">${righeScontrino(future)}</div>` : ''}
     ` : ''}
     ${fatte.length ? righeScontrino(fatte.slice(0, 80))
+      : parole.length ? (future.length ? '' : `<div class="empty"><div class="big">Nessun risultato</div>
+      <p>Prova con meno parole: cerca una descrizione, una categoria, un nome, un importo come 43,20 o una data come 08/09.</p></div>`)
       : future.length ? `<p class="r-note r-center" style="margin:14px 0">Per ora c'è solo roba in arrivo: qui sotto comparirà appena arriva il giorno.</p>`
       : `<div class="empty"><div class="big">Scontrino vuoto</div>
       <p>Batti la prima spesa col tasto verde qui sotto.</p></div>`}
@@ -1963,6 +1992,8 @@ const ACTS = {
     try { await saveExpenseFromDraft(); } catch (e) { toast(e.message); }
   },
   'tgl-future': () => { S.futureAperte = !S.futureAperte; render(); },
+  'cerca-apri': () => { S.cerca = ''; render(); document.getElementById('cerca')?.focus(); },
+  'cerca-chiudi': () => { S.cerca = null; render(); },
   'pick-pay': el => { S.sheet.draft.pay = el.dataset.m; render(); },
   'edit-exp': el => {
     const e = expenses().find(x => x.id === el.dataset.id);
@@ -2272,10 +2303,12 @@ document.addEventListener('change', async e => {
 });
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && S.sheet) { S.sheet = null; render(); }
+  if (e.key === 'Escape' && S.sheet) { S.sheet = null; render(); return; }
+  if (e.key === 'Escape' && S.cerca !== null) { S.cerca = null; render(); }
 });
 document.addEventListener('input', e => {
   if (e.target.id === 'chatinput') { aggiornaComposer(); return; } // la chat non ha bozze aperte
+  if (e.target.id === 'cerca') { S.cerca = e.target.value; render(); return; }
   const d = S.sheet?.draft;
   if (!d) return;
   if (e.target.id === 'ddesc' || e.target.id === 'sdesc') d.desc = e.target.value;
